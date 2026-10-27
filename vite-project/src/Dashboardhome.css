@@ -1,0 +1,99 @@
+.db-top__tools { position: relative; }
+
+.dh { display: grid; gap: 24px; margin-top: 20px; }
+.dh h2, .dh h3, .dh p { margin: 0; }
+.dh-card { background: #fff; border-radius: 20px; box-shadow: 0 6px 24px rgba(194, 120, 60, .1); }
+.dh-btn {
+  height: 52px; padding: 0 22px; border: 0; border-radius: 8px; background: #f97316; color: #fff;
+  cursor: pointer; font: 800 15px "Nunito", sans-serif; box-shadow: 0 4px 12px rgba(249, 115, 22, .3);
+  transition: transform .15s, background .15s;
+}
+.dh-btn:hover { background: #ea6a0a; transform: translateY(-1px); }
+.dh-btn--wide { width: 100%; height: 52px; border-radius: 6px; }
+.dh-badge { padding: 3px 9px; border-radius: 999px; background: #10b981; color: #fff; font-size: 12px; font-weight: 800; }
+.dh-price { display: flex; align-items: center; gap: 10px; }
+.dh-price b { font-size: 22px; font-weight: 800; }
+
+.dh-thumb { flex: none; width: 70px; height: 70px; border-radius: 10px; object-fit: cover; }
+.dh-thumb--empty { background: linear-gradient(135deg, #e5e7eb, #f1f5f9); border: 1px solid #e2e8f0; }
+
+/* Top row */
+.dh-top { display: grid; grid-template-columns: 1.1fr 1fr; padding: 16px 18px; }
+.dh-track h2 { font-size: 24px; font-weight: 800; }
+.dh-track p { margin: 2px 0 10px; font-size: 10px; color: #64748b; }
+.dh-track label { display: block; margin-bottom: 8px; font-size: 12px; font-weight: 800; }
+.dh-track__row { display: flex; gap: 12px; padding-right: 24px; }
+.dh-track__row input {
+  flex: 1; min-width: 0; height: 52px; padding: 0 16px; border: 1px solid #e5e7eb; border-radius: 8px;
+  font: 600 15px "Nunito", sans-serif;
+}
+.dh-track__row input:focus { outline: none; border-color: #f97316; box-shadow: 0 0 0 3px rgba(249, 115, 22, .2); }
+.dh-insights { padding-left: 14px; border-left: 2px solid #e5e7eb; }
+.dh-insights h2 { font-size: 24px; font-weight: 800; }
+.dh-insights__row { display: flex; gap: 20px; margin-top: 12px; }
+.dh-stat { display: flex; align-items: center; gap: 12px; font-size: 15px; font-weight: 600; line-height: 1.3; }
+.dh-stat b { font-weight: 800; }
+.dh-stat__icon { flex: none; width: 48px; height: 52px; border-radius: 8px; background: #ffe3d0; }
+.dh-stores { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 10px; font-size: 13px; }
+.dh-stores span { display: inline-flex; }
+.dh-stores i { width: 22px; height: 22px; margin-left: -8px; border: 2px solid #fff; border-radius: 50%; }
+
+/* Middle row */
+.dh-mid { display: grid; grid-template-columns: 5fr 7fr; gap: 24px; }
+.dh-drop { padding: 24px 28px; border-radius: 20px; background: #fff3ea; box-shadow: 0 6px 24px rgba(194, 120, 60, .1); }
+.dh-drop header { display: flex; justify-content: space-between; }
+.dh-drop h2 { font-size: 17px; font-weight: 800; }
+.dh-drop header p { font-size: 17px; color: #94a3b8; }
+.dh-drop header button { border: 0; background: none; color: #94a3b8; cursor: pointer; letter-spacing: 1px; align-self: flex-start; }
+.dh-drop__item { display: flex; gap: 14px; margin: 14px 0 22px; }
+.dh-drop__img { width: 150px; height: 150px; }
+.dh-drop__item h3 { margin-top: 4px; font-size: 17px; font-weight: 800; }
+.dh-drop__item small { display: block; color: #94a3b8; font-size: 13px; }
+.dh-drop__item s { display: block; margin-top: 24px; color: #94a3b8; font-size: 20px; }
+
+.dh-saved { padding: 28px; border-radius: 20px; background: #0f172a; color: #fff; }
+.dh-saved header { display: flex; justify-content: space-between; align-items: flex-start; }
+.dh-saved h2 { font-size: 17px; font-weight: 800; }
+.dh-saved header span { font-size: 12px; opacity: .7; }
+.dh-saved__amount { display: flex; align-items: center; gap: 16px; margin: 8px 0 18px; }
+.dh-saved__amount b { font-size: 46px; font-weight: 700; }
+.dh-saved svg { display: block; width: 100%; height: 130px; }
+.dh-saved p { margin-top: 16px; font-size: 11px; }
+
+/* Bottom row */
+.dh-bottom { display: grid; grid-template-columns: 1.45fr 1fr; gap: 24px; padding-bottom: 24px; }
+.dh-list { padding: 28px; min-height: 330px; }
+.dh-list header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+.dh-list h2 { font-size: 17px; font-weight: 800; }
+.dh-list header a { color: #f97316; font-size: 14px; font-weight: 700; text-decoration: none; }
+.dh-coll { margin-bottom: 22px; }
+.dh-coll > div:first-child { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.dh-coll b { font-size: 14px; font-weight: 800; }
+.dh-coll small { margin-left: auto; font-size: 11px; }
+.dh-bar { height: 6px; border-radius: 3px; background: #eceff3; }
+.dh-bar i { display: block; height: 100%; border-radius: 3px; background: #f97316; }
+.dh-watch { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.dh-watch p { font-size: 17px; }
+
+/* Notifications dropdown */
+.dh-notif {
+  position: absolute; top: 52px; right: 0; z-index: 40; width: min(500px, 90vw);
+  padding: 24px; border-radius: 24px; background: #fff; box-shadow: 0 12px 40px rgba(15, 23, 42, .18);
+}
+.dh-notif__head { display: flex; justify-content: space-between; align-items: center; padding-bottom: 18px; border-bottom: 1px solid #e5e7eb; }
+.dh-notif h2 { font-size: 19px; font-weight: 800; }
+.dh-notif__head button {
+  height: 52px; padding: 0 20px; border: 1px solid #eee; border-radius: 10px; background: #fff;
+  cursor: pointer; font: 700 14px "Nunito", sans-serif;
+}
+.dh-notif ul { margin: 0; padding: 0; list-style: none; }
+.dh-notif li { display: flex; gap: 20px; padding: 24px 0; border-bottom: 1px solid #e5e7eb; }
+.dh-notif li:last-child { border: 0; padding-bottom: 8px; }
+.dh-notif__dot { flex: none; width: 8px; height: 8px; margin-top: 8px; border-radius: 50%; }
+.dh-notif li p { font-size: 15px; }
+.dh-notif li small { display: block; margin-top: 12px; color: #94a3b8; font-size: 11px; }
+
+@media (max-width: 1100px) {
+  .dh-top, .dh-mid, .dh-bottom { grid-template-columns: 1fr; }
+  .dh-insights { border-left: 0; padding: 16px 0 0; }
+}

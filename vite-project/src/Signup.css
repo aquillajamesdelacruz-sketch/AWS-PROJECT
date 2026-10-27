@@ -1,0 +1,15 @@
+/* Sign-up reuses the LogIn layout; these tweaks fit the longer form. */
+.su { padding-top: 48px; }
+.su .li-intro { margin-top: 0; }
+.su .li-card { padding-top: 32px; padding-bottom: 40px; }
+.su .li-card__logo { margin-bottom: 18px; }
+.su .li-card__sub { margin: 10px 0 24px; }
+.su .li-input { margin-bottom: 18px; }
+.su .li-row { margin-top: -4px; }
+.su-error { margin: 14px 0 0; }
+.su-submit { margin-top: 22px; }
+.su .li-new { margin-top: 16px; }
+
+@media (max-width: 960px) {
+  .su { padding-top: 32px; }
+}
