@@ -1,0 +1,147 @@
+/* Dark theme for the logged-in app.
+   Dashboard.jsx sets <html data-theme="light|dark">. "Match device" picks one from the system setting. */
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #e8edf5;
+  --muted: #94a3b8;
+  --peach: rgba(249, 115, 22, .16);
+  --cream: #1a2234;
+}
+html[data-theme="dark"] body { background: #0b1220; color: var(--ink); }
+html[data-theme="dark"] .wl { --ink: #e8edf5; --mut: #94a3b8; }
+
+/* ---------- Page + sidebar ---------- */
+html[data-theme="dark"] .db-app { background: #0b1220; }
+html[data-theme="dark"] .db-side { background: #0f1729; border-color: #1f2a40; }
+html[data-theme="dark"] .db-main {
+  background:
+    radial-gradient(ellipse at 85% 5%, rgba(249, 115, 22, .10), transparent 45%),
+    radial-gradient(ellipse at 15% 85%, rgba(59, 130, 246, .08), transparent 45%),
+    #0b1220;
+}
+html[data-theme="dark"] .db-nav:hover { background: rgba(249, 115, 22, .10); }
+html[data-theme="dark"] .db-tip { border-color: rgba(249, 115, 22, .3); }
+html[data-theme="dark"] .db-empty p,
+html[data-theme="dark"] .db-top__text p { color: #94a3b8; }
+
+/* ---------- Cards and panels ---------- */
+html[data-theme="dark"] .dh-card,
+html[data-theme="dark"] .wl-card,
+html[data-theme="dark"] .cl-card,
+html[data-theme="dark"] .bs-stat,
+html[data-theme="dark"] .bs-card,
+html[data-theme="dark"] .st-card,
+html[data-theme="dark"] .dh-notif,
+html[data-theme="dark"] .wl-modal,
+html[data-theme="dark"] .ai-modal,
+html[data-theme="dark"] .ai-success__msg,
+html[data-theme="dark"] .ai-toast {
+  background: #131c2e;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, .35);
+}
+html[data-theme="dark"] .wl-modal,
+html[data-theme="dark"] .ai-modal { box-shadow: 0 20px 50px rgba(0, 0, 0, .6); }
+html[data-theme="dark"] .wl-row { background: rgba(255, 255, 255, .03); border-color: #26324a; }
+html[data-theme="dark"] .cl-card { color: var(--ink); }
+html[data-theme="dark"] .dh-saved { border: 1px solid #26324a; }
+
+/* warm (peach) surfaces */
+html[data-theme="dark"] .dh-drop { background: #231a17; box-shadow: 0 6px 24px rgba(0, 0, 0, .35); }
+html[data-theme="dark"] .dh-stat__icon { background: #3a271c; }
+html[data-theme="dark"] .bs-banner { background: #231a17; border-color: rgba(249, 115, 22, .28); }
+html[data-theme="dark"] .cl-banner { background: linear-gradient(180deg, #2a1d17, #231a17); box-shadow: 0 6px 24px rgba(0, 0, 0, .35); }
+html[data-theme="dark"] .wl-card__tip,
+html[data-theme="dark"] .wl-tip { background: rgba(249, 115, 22, .16); }
+
+/* selected (delete mode) */
+html[data-theme="dark"] .wl-card.is-selected,
+html[data-theme="dark"] .wl-row.is-selected,
+html[data-theme="dark"] .cl-card.is-selected { background: rgba(239, 68, 68, .14); border-color: rgba(239, 68, 68, .55); }
+
+/* onboarding popup */
+html[data-theme="dark"] .db-modal { background: linear-gradient(180deg, #1a2540 0%, #131c2e 60%, #17202f 100%); }
+html[data-theme="dark"] .db-step { background: #26324a; color: #94a3b8; }
+html[data-theme="dark"] .db-step.is-current { background: rgba(249, 115, 22, .22); color: var(--orange); }
+html[data-theme="dark"] .db-step.is-done { background: var(--orange); color: #fff; }
+
+/* ---------- Inputs and buttons ---------- */
+html[data-theme="dark"] .wl-input,
+html[data-theme="dark"] .ai-input,
+html[data-theme="dark"] .st-input,
+html[data-theme="dark"] .dh-track__row input,
+html[data-theme="dark"] .ai-input:disabled,
+html[data-theme="dark"] .wl-search,
+html[data-theme="dark"] .wl-tool,
+html[data-theme="dark"] .wl-btn--ghost,
+html[data-theme="dark"] .ai-btn--ghost,
+html[data-theme="dark"] .wl-x,
+html[data-theme="dark"] .ai-close,
+html[data-theme="dark"] .db-modal__close,
+html[data-theme="dark"] .st-btn,
+html[data-theme="dark"] .dh-notif__head button {
+  background-color: #18223a;
+  border-color: #2a3753;
+  color: var(--ink);
+}
+html[data-theme="dark"] .wl-btn--outline-red { background: transparent; }
+html[data-theme="dark"] .wl-tool:hover,
+html[data-theme="dark"] .st-btn:hover { border-color: rgba(249, 115, 22, .6); }
+html[data-theme="dark"] .wl-tool.is-on { border-color: var(--orange); color: var(--orange); }
+html[data-theme="dark"] .wl-input:focus,
+html[data-theme="dark"] .ai-input:focus,
+html[data-theme="dark"] .st-input:focus,
+html[data-theme="dark"] .dh-track__row input:focus { border-color: #f97316; }
+html[data-theme="dark"] .wl-search:focus-within { border-color: var(--orange); }
+html[data-theme="dark"] input::placeholder { color: #6b7a93; }
+html[data-theme="dark"] .wl-select,
+html[data-theme="dark"] .ai-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23e8edf5' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M3 6l5 5 5-5'/%3E%3C/svg%3E");
+}
+html[data-theme="dark"] .ai-fetch:disabled { background: rgba(249, 115, 22, .15); color: #f97316; }
+html[data-theme="dark"] .ai-badge { background: rgba(239, 68, 68, .16); color: #fca5a5; }
+html[data-theme="dark"] .cl-swatch:not(.is-on) { border-color: #2a3753; }
+html[data-theme="dark"] .cl-swatch { background: #131c2e; }
+html[data-theme="dark"] .st-notice { background: #26324a; }
+
+/* chips and switches */
+html[data-theme="dark"] .st-chips button { background: #18223a; border-color: #2a3753; color: var(--ink); }
+html[data-theme="dark"] .st-chips button.is-on { background: rgba(249, 115, 22, .18); border-color: rgba(249, 115, 22, .55); }
+html[data-theme="dark"] .wl-switch { background: #3b4a66; }
+html[data-theme="dark"] .wl-switch.is-on { background: var(--o); }
+html[data-theme="dark"] .wl-chip { background: #26324a; }
+html[data-theme="dark"] .wl-pill--green { background: rgba(16, 185, 129, .2); color: #34d399; }
+
+/* ---------- Bars, tracks, lines ---------- */
+html[data-theme="dark"] .wl-prog,
+html[data-theme="dark"] .dh-bar,
+html[data-theme="dark"] .cl-bar,
+html[data-theme="dark"] .cl-track__bar { background: #26324a; }
+html[data-theme="dark"] .wl-prog b,
+html[data-theme="dark"] .cl-dot { background: #131c2e; }
+html[data-theme="dark"] .dh-stores i { border-color: #131c2e; }
+html[data-theme="dark"] .wl-box.is-on { box-shadow: inset 0 0 0 3px #131c2e; }
+html[data-theme="dark"] .wl-alert,
+html[data-theme="dark"] .wl-rule,
+html[data-theme="dark"] .ai-actions--end,
+html[data-theme="dark"] .dh-notif__head,
+html[data-theme="dark"] .dh-notif li,
+html[data-theme="dark"] .bs-row,
+html[data-theme="dark"] .bs-row--head + .bs-row { border-color: #26324a; }
+html[data-theme="dark"] .dh-insights { border-left-color: #26324a; }
+
+/* ---------- Placeholders and skeletons ---------- */
+html[data-theme="dark"] .wl-img--empty,
+html[data-theme="dark"] .dh-thumb--empty { background: linear-gradient(135deg, #1d2740, #18223a); border-color: #2a3753; color: #52627d; }
+html[data-theme="dark"] .ai-skeleton { background: #18223a; }
+html[data-theme="dark"] .ai-skeleton i { background: linear-gradient(90deg, #26324a 25%, #2f3d5a 50%, #26324a 75%); background-size: 200% 100%; }
+
+/* ---------- Text that was set to a fixed dark or gray color ---------- */
+html[data-theme="dark"] .cl-back { color: #9db4ff; }
+html[data-theme="dark"] .cl-lbl--end b,
+html[data-theme="dark"] .bs-col span.is-now { color: var(--ink); }
+html[data-theme="dark"] .cl-banner__body > p,
+html[data-theme="dark"] .cl-lbl,
+html[data-theme="dark"] .dh-track p,
+html[data-theme="dark"] .ai-head p,
+html[data-theme="dark"] .ai-center p { color: #94a3b8; }

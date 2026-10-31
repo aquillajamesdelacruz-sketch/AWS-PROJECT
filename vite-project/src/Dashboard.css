@@ -14,7 +14,7 @@ body { margin: 0; font-family: "Nunito", system-ui, sans-serif; color: var(--ink
 .db-app {
   position: relative;
   display: grid;
-  grid-template-columns: 200px 1fr;
+  grid-template-columns: 236px 1fr;
   min-height: 100vh;
   background: #fff;
 }
@@ -33,7 +33,7 @@ body { margin: 0; font-family: "Nunito", system-ui, sans-serif; color: var(--ink
   display: flex; align-items: center; gap: 14px; width: 100%;
   margin-bottom: 8px; padding: 14px 16px;
   border: 0; border-radius: 12px; background: transparent; cursor: pointer;
-  font: 600 13px "Nunito", sans-serif; color: var(--ink); text-align: left;
+  font: 600 14px "Nunito", sans-serif; color: var(--ink); text-align: left; white-space: nowrap;
   transition: background .15s;
 }
 .db-nav svg { color: var(--muted); flex: none; }

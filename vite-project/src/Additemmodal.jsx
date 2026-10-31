@@ -3,7 +3,6 @@ import "./Additemmodal.css";
 import find from "./assets/find.png";
 import mascot from "./assets/mascot.png";
 
-const COLLECTIONS = ["Desk Setup", "Birthday Gifts", "Graduation Gifts"];
 const STEPS = ["Paste link", "Confirm details", "Track"];
 const STORES = { shopee: "Shopee", lazada: "Lazada", amazon: "Amazon", tiktok: "TikTok Shop" };
 
@@ -24,14 +23,14 @@ function StepLine() {
   );
 }
 
-export default function AddItemModal({ initialUrl = "", onClose, onSave }) {
+export default function AddItemModal({ initialUrl = "", collections = [], onClose, onSave }) {
   const [phase, setPhase] = useState(initialUrl ? "fetching" : "paste"); // paste | fetching | confirm | success
   const [url, setUrl] = useState(initialUrl);
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [original, setOriginal] = useState(0);
   const [target, setTarget] = useState("");
-  const [collection, setCollection] = useState(COLLECTIONS[0]);
+  const [collection, setCollection] = useState(collections[0] || "");
   const [toast, setToast] = useState(false);
 
   const step = phase === "success" ? 2 : phase === "confirm" ? 1 : 0;
@@ -57,7 +56,7 @@ export default function AddItemModal({ initialUrl = "", onClose, onSave }) {
   }, [onClose]);
 
   const save = () => {
-    onSave?.({ name, url, store, original: Math.max(original, parse(price)), price: parse(price), target: parse(target), collection });
+    onSave?.({ image: keyboard /* demo photo: use the image from your real fetch */, name, url, store, original: Math.max(original, parse(price)), price: parse(price), target: parse(target), collection });
     setToast(true);
     setPhase("success");
   };
@@ -144,7 +143,8 @@ export default function AddItemModal({ initialUrl = "", onClose, onSave }) {
               <div>
                 <label className="ai-label" htmlFor="ai-coll">Collection</label>
                 <select id="ai-coll" className="ai-input ai-select" value={collection} onChange={(e) => setCollection(e.target.value)}>
-                  {COLLECTIONS.map((c) => <option key={c}>{c}</option>)}
+                  <option value="">No collection</option>
+                  {collections.map((c) => <option key={c}>{c}</option>)}
                 </select>
               </div>
             </div>
@@ -165,7 +165,7 @@ export default function AddItemModal({ initialUrl = "", onClose, onSave }) {
               </div>
               <h3>Item tracked successfully!</h3>
               <p className="ai-success__msg">
-                {name.split(",")[0]} added to {collection}. We will notify you when it hits {peso(target)}.
+                {name.split(",")[0]} added to {collection || "your watchlist"}. We will notify you when it hits {peso(target)}.
               </p>
               <div className="ai-actions">
                 <button type="button" className="ai-btn ai-btn--primary" onClick={onClose}>Go to Dashboard</button>

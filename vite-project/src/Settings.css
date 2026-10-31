@@ -1,0 +1,42 @@
+.st h1, .st h2, .st p { margin: 0; }
+.st-title { font-size: 34px; font-weight: 900; }
+.st-notice { position: fixed; right: 32px; bottom: 28px; z-index: 80; padding: 14px 20px; border-radius: 12px; background: #0f172a; color: #fff; font-size: 14px; font-weight: 700; box-shadow: 0 8px 24px rgba(0, 0, 0, .25); }
+
+.st-card { margin-top: 24px; padding: 28px; border-radius: 24px; background: #fff; box-shadow: 0 6px 24px rgba(194, 120, 60, .1); }
+.st-title + .st-card { margin-top: 40px; }
+.st-card h2 { font-size: 18px; font-weight: 800; }
+.st-head { display: flex; justify-content: space-between; align-items: center; }
+
+.st-btn { height: 52px; padding: 0 30px; border: 1px solid #eef0f3; border-radius: 10px; background: #fff; color: #0f172a; cursor: pointer; font: 700 15px "Nunito", sans-serif; transition: border-color .15s, transform .15s; }
+.st-btn:hover { border-color: #fbc9a0; transform: translateY(-1px); }
+.st-btn--wide { min-width: 226px; }
+.st-btn--red { min-width: 184px; color: #ef2f1f; }
+
+.st-two { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 28px; }
+.st-label { display: block; margin-bottom: 10px; font-size: 12px; font-weight: 800; }
+.st-input { width: 100%; height: 52px; padding: 0 16px; border: 1px solid #dfe5ee; border-radius: 8px; background: #fff; font: 600 15px "Nunito", sans-serif; color: #0f172a; }
+.st-input::placeholder { color: #94a3b8; }
+.st-input:focus { outline: none; border-color: #f97316; box-shadow: 0 0 0 3px rgba(249, 115, 22, .2); }
+
+.st-line { display: flex; justify-content: space-between; align-items: center; min-height: 58px; font-size: 14px; }
+.st-card h2 + .st-line { margin-top: 12px; }
+.st-switch { display: flex; align-items: center; gap: 16px; }
+.st-switch span { min-width: 22px; font-size: 14px; font-weight: 800; }
+
+.st-chips { display: flex; gap: 8px; }
+.st-chips button { height: 40px; padding: 0 26px; border: 1px solid #e5e9f0; border-radius: 999px; background: #f6f8fb; color: #0f172a; cursor: pointer; font: 700 13px "Nunito", sans-serif; }
+.st-chips button.is-on { border-color: #fbc9a0; background: #fff1e4; }
+
+.st-danger { display: flex; justify-content: space-between; margin-top: 20px; }
+.st-error { margin-top: 12px !important; color: #b91c1c; font-size: 12px; font-weight: 700; }
+.st-modal .st-gap { margin-top: 18px; }
+.st-card button:focus-visible, .st-modal button:focus-visible { outline: 3px solid #1e3a8a; outline-offset: 2px; }
+
+@media (max-width: 900px) {
+  .st-title { font-size: 26px; }
+  .st-two { grid-template-columns: 1fr; }
+  .st-head, .st-danger { flex-direction: column; align-items: stretch; gap: 12px; }
+  .st-line { flex-wrap: wrap; gap: 8px; }
+  .st-btn--wide, .st-btn--red { min-width: 0; }
+  .st-chips button { padding: 0 16px; }
+}

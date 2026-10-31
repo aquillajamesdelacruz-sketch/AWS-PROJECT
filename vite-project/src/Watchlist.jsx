@@ -4,8 +4,6 @@ import mascot from "./assets/mascot.png";
 import find from "./assets/find.png";
 import sleep from "./assets/sleep.png";
 
-const COLLECTIONS = ["Desk Setup", "Birthday Gifts", "Graduation Gifts"];
-
 /* ---------- helpers ---------- */
 const parse = (v) => Number(String(v).replace(/[^0-9.]/g, "")) || 0;
 const peso = (n) => "₱" + Math.round(n).toLocaleString("en-PH");
@@ -52,7 +50,7 @@ function Thumb({ item, className = "" }) {
     : <span className={`wl-img wl-img--empty ${className}`} role="img" aria-label="No product photo"><I size={32}><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="9" cy="9" r="2" /><path d="M21 15l-5-5L5 21" /></I></span>;
 }
 
-function Modal({ onClose, children, className = "" }) {
+export function Modal({ onClose, children, className = "" }) {
   useEscape(onClose);
   return (
     <div className="wl-overlay" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
@@ -85,11 +83,11 @@ function ConfirmDelete({ onCancel, onConfirm }) {
 }
 
 /* ---------- update item ---------- */
-function UpdateItem({ item, onClose, onSave }) {
+function UpdateItem({ item, collections, onClose, onSave }) {
   const [name, setName] = useState(item.name);
   const [price, setPrice] = useState(String(item.price));
   const [target, setTarget] = useState(String(item.target));
-  const [collection, setCollection] = useState(item.collection || COLLECTIONS[0]);
+  const [collection, setCollection] = useState(item.collection || "");
   return (
     <Modal onClose={onClose} className="wl-modal--md">
       <header className="wl-modal__head">
@@ -105,7 +103,7 @@ function UpdateItem({ item, onClose, onSave }) {
           <input id="u-target" className="wl-input" inputMode="decimal" value={target ? peso(parse(target)) : ""} onChange={(e) => setTarget(e.target.value)} /></div>
         <div><label className="wl-label" htmlFor="u-coll">Collection</label>
           <select id="u-coll" className="wl-input wl-select" value={collection} onChange={(e) => setCollection(e.target.value)}>
-            {COLLECTIONS.map((c) => <option key={c}>{c}</option>)}</select></div>
+            <option value="">No collection</option>{collections.map((c) => <option key={c}>{c}</option>)}</select></div>
       </div>
       <div className="wl-actions wl-actions--end wl-rule">
         <button type="button" className="wl-btn wl-btn--ghost" onClick={onClose}>Cancel</button>
@@ -198,7 +196,7 @@ function ProductModal({ item, onClose, onEdit, onDelete, onUpdate }) {
 }
 
 /* ---------- views ---------- */
-function CardView({ items, edit, selected, toggle, open }) {
+export function CardView({ items, edit, selected, toggle, open, actionLabel = "View Product" }) {
   return (
     <div className="wl-cards">
       {items.map((it) => (
@@ -216,7 +214,7 @@ function CardView({ items, edit, selected, toggle, open }) {
               <img src={mascot} alt="" />
               <p>{it.price <= it.target ? "Target hit! Time to buy." : `Almost there! Only ${peso(toTarget(it))} to go.`}</p>
             </div>
-            <button type="button" className="wl-btn wl-btn--primary wl-btn--full" onClick={(e) => { e.stopPropagation(); if (!edit) open(it.id); }}>View Product</button>
+            <button type="button" className="wl-btn wl-btn--primary wl-btn--full" onClick={(e) => { e.stopPropagation(); if (!edit) open(it.id); }}>{actionLabel}</button>
           </div>
         </article>
       ))}
@@ -252,7 +250,7 @@ function ListView({ items, edit, selected, toggle, open, sort, setSort }) {
 }
 
 /* ---------- page ---------- */
-export default function Watchlist({ items, onAdd, onUpdate, onDelete }) {
+export default function Watchlist({ items, collections = [], openId, onOpened, onAdd, onUpdate, onDelete }) {
   const [view, setView] = useState("card");
   const [query, setQuery] = useState("");
   const [edit, setEdit] = useState(false);
@@ -261,6 +259,11 @@ export default function Watchlist({ items, onAdd, onUpdate, onDelete }) {
   const [detailId, setDetailId] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [confirm, setConfirm] = useState(null); // array of ids to delete
+
+  // Lets other pages (e.g. a collection) open a product straight away.
+  useEffect(() => {
+    if (openId) { setDetailId(openId); onOpened?.(); }
+  }, [openId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const shown = useMemo(() => {
     let list = items.filter((i) => i.name.toLowerCase().includes(query.trim().toLowerCase()));
@@ -321,7 +324,7 @@ export default function Watchlist({ items, onAdd, onUpdate, onDelete }) {
         <ProductModal item={detail} onClose={() => setDetailId(null)} onUpdate={onUpdate}
           onEdit={() => setEditingId(detail.id)} onDelete={() => setConfirm([detail.id])} />
       )}
-      {editing && <UpdateItem item={editing} onClose={() => setEditingId(null)} onSave={(u) => { onUpdate(u); setEditingId(null); }} />}
+      {editing && <UpdateItem item={editing} collections={collections} onClose={() => setEditingId(null)} onSave={(u) => { onUpdate(u); setEditingId(null); }} />}
       {confirm && <ConfirmDelete onCancel={() => setConfirm(null)} onConfirm={doDelete} />}
     </div>
   );

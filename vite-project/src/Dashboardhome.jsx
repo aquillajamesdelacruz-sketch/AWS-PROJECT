@@ -67,7 +67,10 @@ export function Notifications({ onClose }) {
   );
 }
 
-export default function DashboardHome({ added = [], onQuickAdd }) {
+export default function DashboardHome({ added = [], collections = [], onQuickAdd }) {
+  const collectionRows = collections.length
+    ? collections.map((c) => ({ name: c.name, target: c.goal, progress: c.progress, icon: "box" }))
+    : COLLECTIONS;
   const [url, setUrl] = useState("");
   const latest = added[0];
   const watchlist = [...added.map((a) => ({ name: a.name.split(",")[0], price: a.price, drop: 20, image: a.image })), ...SAMPLE_WATCHLIST].slice(0, 3);
@@ -95,7 +98,7 @@ export default function DashboardHome({ added = [], onQuickAdd }) {
           <h2>Quick Insights</h2>
           <div className="dh-insights__row">
             <div className="dh-stat"><span className="dh-stat__icon" /><p>Currently Tracking<br /><b>{tracking} Items</b></p></div>
-            <div className="dh-stat"><span className="dh-stat__icon" /><p>Currently Collecting<br /><b>5 Collections</b></p></div>
+            <div className="dh-stat"><span className="dh-stat__icon" /><p>Currently Collecting<br /><b>{collections.length || 5} Collections</b></p></div>
           </div>
           <div className="dh-stores">
             Current Stores
@@ -138,7 +141,7 @@ export default function DashboardHome({ added = [], onQuickAdd }) {
       <section className="dh-bottom">
         <article className="dh-card dh-list">
           <header><h2>Collections</h2><a href="#collections">View All →</a></header>
-          {COLLECTIONS.map((c) => (
+          {collectionRows.map((c) => (
             <div className="dh-coll" key={c.name}>
               <div><CollectionIcon type={c.icon} /><b>{c.name}</b><small>Target Total Price: <strong>{peso(c.target)}</strong></small></div>
               <div className="dh-bar" role="progressbar" aria-valuenow={Math.round(c.progress * 100)} aria-valuemin="0" aria-valuemax="100"><i style={{ width: `${c.progress * 100}%` }} /></div>

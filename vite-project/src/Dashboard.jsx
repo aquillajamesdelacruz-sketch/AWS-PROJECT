@@ -1,13 +1,18 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./Dashboard.css";
+import "./Theme.css";
 import logo from "./assets/logo.png";
 import mascot from "./assets/mascot.png";
 import find from "./assets/find.png";
 import stocks from "./assets/stocks.png";
 import sleep from "./assets/sleep.png";
-import Additemmodal from "./Additemmodal";
+import AddItemModal from "./Additemmodal";
 import Watchlist from "./Watchlist";
-import Dashboardhome, { Notifications } from "./Dashboardhome";
+import Collection from "./Collection";
+import BoughtSavings from "./BoughtSavings";
+import Settings from "./Settings";
+import { statsFor } from "./Collectionstats";
+import DashboardHome, { Notifications } from "./Dashboardhome";
 
 const Icon = ({ children }) => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -44,7 +49,19 @@ const getSteps = (firstName) => [
   },
 ];
 
-export default function Dashboard({ userName = "Bea Shainne" }) {
+const THEME_KEY = "peekyfox-theme";
+const loadTheme = () => {
+  try {
+    const saved = localStorage.getItem(THEME_KEY);
+    return ["light", "dark", "system"].includes(saved) ? saved : "light";
+  } catch {
+    return "light";
+  }
+};
+
+export default function Dashboard({ userName: initialName = "Bea Shainne", onDeleteAccount }) {
+  const [userName, setUserName] = useState(initialName);
+  const [settings, setSettings] = useState({ email: "", inApp: true, emailAlerts: false, frequency: "instant", theme: loadTheme() });
   const firstName = userName.split(" ")[0];
   const initials = userName.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
   const STEPS = getSteps(firstName);
@@ -54,7 +71,41 @@ export default function Dashboard({ userName = "Bea Shainne" }) {
   const [addOpen, setAddOpen] = useState(false);
   const [quickUrl, setQuickUrl] = useState("");
   const [items, setItems] = useState([]);
+  const [collections, setCollections] = useState([]);
+  const [focusId, setFocusId] = useState(null);
+
+  // Light / Dark / Match device. The result is set on <html data-theme="light|dark"> (styles are in Theme.css).
+  useEffect(() => {
+    const media = window.matchMedia?.("(prefers-color-scheme: dark)");
+    const apply = () => {
+      const dark = settings.theme === "dark" || (settings.theme === "system" && !!media?.matches);
+      document.documentElement.dataset.theme = dark ? "dark" : "light";
+    };
+    apply();
+    try { localStorage.setItem(THEME_KEY, settings.theme); } catch { /* storage unavailable */ }
+    media?.addEventListener?.("change", apply); // follows the device while "Match device" is picked
+    return () => media?.removeEventListener?.("change", apply);
+  }, [settings.theme]);
+
+  // Back to the normal look when leaving the app (e.g. after deleting the account)
+  useEffect(() => () => { delete document.documentElement.dataset.theme; }, []);
   const [notifOpen, setNotifOpen] = useState(false);
+
+  const collectionNames = collections.map((c) => c.name);
+  const collectionSummaries = collections.map((c) => ({ ...c, ...statsFor(items.filter((i) => i.collection === c.name)) }));
+
+  const tools = (
+      <div className="db-top__tools">
+        <button type="button" className="db-iconbtn" aria-label="Search">
+          <Icon><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></Icon>
+        </button>
+        <button type="button" className="db-iconbtn" aria-label="Notifications" aria-expanded={notifOpen} onClick={() => setNotifOpen(!notifOpen)}>
+          <Icon><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></Icon>
+        </button>
+        {notifOpen && <Notifications onClose={() => setNotifOpen(false)} />}
+        <span className="db-avatar" aria-label={userName}>{initials}</span>
+      </div>
+  );
 
   const openAdd = (url = "") => { setQuickUrl(url); setAddOpen(true); };
 
@@ -80,7 +131,7 @@ export default function Dashboard({ userName = "Bea Shainne" }) {
         </nav>
 
         <p className="db-side__group">Preferences</p>
-        <button type="button" className="db-nav">
+        <button type="button" className={`db-nav${active === "Settings" ? " is-active" : ""}`} aria-current={active === "Settings" ? "page" : undefined} onClick={() => setActive("Settings")}>
           <Icon><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></Icon>
           Settings
         </button>
@@ -97,9 +148,36 @@ export default function Dashboard({ userName = "Bea Shainne" }) {
         {active === "Watchlist" ? (
           <Watchlist
             items={items}
+            collections={collectionNames}
+            openId={focusId}
+            onOpened={() => setFocusId(null)}
             onAdd={() => openAdd()}
             onUpdate={(u) => setItems((prev) => prev.map((i) => (i.id === u.id ? u : i)))}
             onDelete={(ids) => setItems((prev) => prev.filter((i) => !ids.includes(i.id)))}
+          />
+        ) : active === "Bought and Savings" ? (
+          <BoughtSavings tools={tools} />
+        ) : active === "Settings" ? (
+          <Settings
+            userName={userName}
+            onNameChange={setUserName}
+            settings={settings}
+            onSettings={(patch) => setSettings((prev) => ({ ...prev, ...patch }))}
+            items={items}
+            onDeleteAccount={onDeleteAccount}
+          />
+        ) : active === "Collection" ? (
+          <Collection
+            items={items}
+            collections={collections}
+            onAddItem={() => openAdd()}
+            onCreate={(c) => setCollections((prev) => [...prev, { id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, ...c }])}
+            onDelete={(ids) => {
+              const gone = collections.filter((c) => ids.includes(c.id)).map((c) => c.name);
+              setCollections((prev) => prev.filter((c) => !ids.includes(c.id)));
+              setItems((prev) => prev.map((i) => (gone.includes(i.collection) ? { ...i, collection: "" } : i)));
+            }}
+            onViewItem={(id) => { setFocusId(id); setActive("Watchlist"); }}
           />
         ) : (
           <>
@@ -109,20 +187,11 @@ export default function Dashboard({ userName = "Bea Shainne" }) {
               <h1>Welcome back, {userName}!</h1>
               <p>What product do you want to track today?</p>
             </div>
-            <div className="db-top__tools">
-              <button type="button" className="db-iconbtn" aria-label="Search">
-                <Icon><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></Icon>
-              </button>
-              <button type="button" className="db-iconbtn" aria-label="Notifications" aria-expanded={notifOpen} onClick={() => setNotifOpen(!notifOpen)}>
-                <Icon><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></Icon>
-              </button>
-              {notifOpen && <Notifications onClose={() => setNotifOpen(false)} />}
-              <span className="db-avatar" aria-label={userName}>{initials}</span>
-            </div>
+            {tools}
           </header>
 
           {items.length > 0 ? (
-            <Dashboardhome added={items} onQuickAdd={openAdd} />
+            <DashboardHome added={items} collections={collectionSummaries} onQuickAdd={openAdd} />
           ) : (
             <section className="db-empty" aria-labelledby="db-empty-title">
               <img className="db-empty__fox" src={sleep} alt="Pixie sleeping" />
@@ -136,9 +205,10 @@ export default function Dashboard({ userName = "Bea Shainne" }) {
       </main>
 
       {addOpen && (
-        <Additemmodal
+        <AddItemModal
           key={quickUrl || "new"}
           initialUrl={quickUrl}
+          collections={collectionNames}
           onClose={() => setAddOpen(false)}
           onSave={(item) => setItems((prev) => [{ id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, image: null, alert: true, ...item }, ...prev])}
         />

@@ -1,0 +1,69 @@
+/* Collection page. Shares toolbar, buttons, modal and card styles with Watchlist.css */
+.cl-back { margin-left: 11px; padding: 0; border: 0; background: none; cursor: pointer; color: #3b4f80; font: 600 15px "Nunito", sans-serif; text-decoration: underline; }
+.cl-title { margin-left: 11px !important; margin-top: 0 !important; font-size: 32px; font-weight: 900; line-height: 1.2; }
+
+.cl-banner { display: flex; align-items: center; gap: 44px; margin: 22px 23px 0 1px; padding: 10px 40px 10px 38px; border-radius: 28px; background: linear-gradient(180deg, #fee8d9, #fddfcc); box-shadow: 0 6px 24px rgba(194, 120, 60, .14); height: 188px; }
+.cl-banner img { flex: none; width: 130px; height: auto; }
+.cl-banner__body { flex: 1; min-width: 0; }
+.cl-banner h2 { font-size: 22px; font-weight: 800; }
+.cl-banner__body > p { margin-top: 22px !important; color: #64748b; font-size: 14px; }
+
+.cl-track { position: relative; height: 50px; margin-top: 20px; max-width: 610px; }
+.cl-track__bar { position: absolute; left: 0; right: 28px; top: 7px; height: 6px; border-radius: 3px; background: #fff; }
+.cl-track__bar i { display: block; height: 100%; border-radius: 3px; background: #c2410c; }
+.cl-dot { position: absolute; top: 3px; width: 14px; height: 14px; margin-left: -7px; border: 3px solid #ea580c; border-radius: 50%; background: #fff; }
+.cl-dot--start { left: 0; margin-left: 0; }
+.cl-flag { position: absolute; right: 0; top: -9px; color: #f97316; }
+.cl-lbl { position: absolute; top: 26px; font-size: 12px; color: #64748b; white-space: nowrap; }
+.cl-lbl--start { left: 0; }
+.cl-lbl--end { right: 0; }
+.cl-lbl--end b { color: #0f172a; }
+
+.cl-sechead { display: flex; justify-content: space-between; align-items: center; margin: 42px 0 24px; }
+.cl-sechead h2 { font-size: 20px; font-weight: 800; }
+.cl-sechead span { color: #94a3b8; font-size: 11px; }
+.cl .wl-cards { margin-top: 0; }
+.cl-more, .cl-none { display: flex; justify-content: center; margin: 28px 0; }
+
+/* list of collections */
+.cl-list { display: grid; gap: 24px; margin-top: 40px; }
+.cl-list--grid { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+.cl-card {
+  display: block; width: 100%; min-height: 250px; padding: 28px; border: 2px solid transparent; border-radius: 24px; background: #fff;
+  box-shadow: 0 6px 24px rgba(194, 120, 60, .1); text-align: left; cursor: pointer; font-family: "Nunito", sans-serif; color: #0f172a;
+  transition: transform .15s, box-shadow .15s;
+}
+.cl-card:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(194, 120, 60, .16); }
+.cl-card.is-selected { border-color: #f4a7a7; background: #fdecec; }
+.cl-card small { display: block; color: #94a3b8; font-size: 12px; }
+.cl-card h3 { margin: 22px 0 0; font-size: 22px; font-weight: 800; }
+.cl-card strong { display: block; margin-top: 22px; font-size: 32px; font-weight: 400; }
+.cl-bar { display: block; height: 6px; margin-top: 24px; border-radius: 3px; background: #f1f1f1; }
+.cl-bar i { display: block; height: 100%; border-radius: 3px; background: var(--c); }
+
+.cl-new { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; min-height: 250px; border: 1px dashed #8da2bd; border-radius: 28px; }
+.cl-new .wl-btn { height: 54px; padding: 0 48px; font-size: 16px; font-weight: 700; }
+.cl-new__plus { color: #f97316; font-size: 34px; font-weight: 300; line-height: 1; }
+
+/* create modal */
+.cl-modal { width: min(100%, 640px) !important; padding: 36px 36px 32px; }
+.cl-modal .wl-x { height: 54px; }
+.cl-modal .wl-input::placeholder { color: #94a3b8; }
+.cl-modal .wl-btn--ghost { min-width: 141px; padding: 0; }
+.cl-modal .wl-btn--primary { min-width: 160px; padding: 0; }
+.cl-error { margin-top: 8px !important; color: #b91c1c; font-size: 12px; font-weight: 700; }
+.cl-colorlabel { margin-top: 28px; }
+.cl-swatches { display: flex; gap: 18px; margin-top: 12px; }
+.cl-swatch { display: grid; place-items: center; width: 54px; height: 54px; padding: 0; border: 1px solid #e5e7eb; border-radius: 50%; background: #fff; cursor: pointer; }
+.cl-swatch i { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; background: var(--c); }
+.cl-swatch.is-on { border: 2px solid var(--c); }
+.cl-swatch:focus-visible { outline: 3px solid #1e3a8a; outline-offset: 2px; }
+
+@media (max-width: 900px) {
+  .cl-banner { flex-direction: column; text-align: center; padding: 20px; gap: 8px; }
+  .cl-banner img { width: 110px; }
+  .cl-banner h2 { font-size: 19px; }
+  .cl-track { max-width: none; text-align: left; }
+  .cl-sechead { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .cl-swatches { gap: 10px; flex-wrap: wrap; }
+}

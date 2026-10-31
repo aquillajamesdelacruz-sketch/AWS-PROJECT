@@ -1,7 +1,7 @@
 import { useState } from "react";
 import LandingPage from "./LandingPage";
 import LogIn from "./LogIn";
-import SignUp from "./Signup";
+import SignUp from "./SignUp";
 import Dashboard from "./Dashboard";
 
 // Turns "bea.shainne@mail.com" into "Bea Shainne"
@@ -31,6 +31,6 @@ export default function App() {
 
   if (page === "login") return <LogIn onLogin={handleLogin} onCreateAccount={goTo("signup")} />;
   if (page === "signup") return <SignUp onSignUp={handleSignUp} onBackToLogin={goTo("login")} />;
-  if (page === "dashboard") return <Dashboard userName={userName} />;
+  if (page === "dashboard") return <Dashboard userName={userName} onDeleteAccount={() => { setUserName(""); setPage("landing"); }} />;
   return <LandingPage onSignUp={goTo("login")} onStartTracking={goTo("login")} />;
 }
