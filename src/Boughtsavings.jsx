@@ -1,6 +1,6 @@
 import { useState } from "react";
 import "./Watchlist.css";
-import "./BoughtSavings.css";
+import "./Boughtsavings.css";
 
 const MONTHS = ["Jun", "Jul", "Aug", "Sep", "Oct"];
 

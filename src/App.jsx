@@ -1,8 +1,9 @@
 import { useState } from "react";
 import LandingPage from "./LandingPage";
 import LogIn from "./LogIn";
-import SignUp from "./SignUp";
+import SignUp from "./Signup";
 import Dashboard from "./Dashboard";
+
 
 // Turns "bea.shainne@mail.com" into "Bea Shainne"
 const nameFromEmail = (email = "") =>

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import "./Watchlist.css";
-import mascot from "./assets/mascot.png";
+import mascot from "./assets/Mascot.png";
 import find from "./assets/find.png";
 import sleep from "./assets/sleep.png";
 

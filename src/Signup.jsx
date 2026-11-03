@@ -1,8 +1,10 @@
 import { useState } from "react";
 import "./LogIn.css";
-import "./SignUp.css";
-import logo from "./assets/logo.png";
-import mascot from "./assets/mascot.png";
+import "./Signup.css";
+import logo from "./assets/Logo.png";
+import mascot from "./assets/Mascot.png";
+
+import { register, googleSignIn } from "./firebase/firebase.js";
 
 function EyeIcon({ off }) {
   return (
@@ -14,21 +16,45 @@ function EyeIcon({ off }) {
   );
 }
 
-export default function SignUp({ onSignUp, onBackToLogin }) {
+//fixed this ahh
+const SignUp = ({ onSignUp, onBackToLogin }) => {
   const [form, setForm] = useState({ email: "", fullName: "", contact: "", password: "", confirm: "" });
   const [show, setShow] = useState(false);
   const [error, setError] = useState("");
 
+  //added this loading errrr
+  const [loading, setLoading] = useState(false);
+
   const set = (key) => (e) => setForm({ ...form, [key]: e.target.value });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!/^[0-9+\s()-]{7,20}$/.test(form.contact.trim())) return setError("Enter a valid contact number.");
     if (form.password.length < 8) return setError("Password must be at least 8 characters.");
     if (form.password !== form.confirm) return setError("Passwords don't match.");
-    setError("");
-    // TODO: send the new account to your API before continuing
-    onSignUp?.({ email: form.email.trim(), fullName: form.fullName.trim(), contact: form.contact.trim() });
+    setError(" ");
+    setLoading(true);
+    
+      //send the info on firebase register function wit trycath
+      try {
+            const credential = await register(
+              form.email.trim(),
+              form.password.trim(),
+              form.fullName.trim(),
+              form.contact.trim()
+            );
+
+            // Notify App.jsx so it can open the dashboard after registration.
+            onSignUp?.({
+              fullName: form.fullName.trim(),
+              email: credential.user.email || form.email.trim()
+            });
+        } catch (error) {
+            setError(error.message)
+        } finally {
+            setLoading(false)
+        }
+
   };
 
   return (
@@ -96,3 +122,5 @@ export default function SignUp({ onSignUp, onBackToLogin }) {
     </main>
   );
 }
+
+export default SignUp;

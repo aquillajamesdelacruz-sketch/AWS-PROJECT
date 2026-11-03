@@ -1,18 +1,21 @@
 import { useEffect, useState } from "react";
 import "./Dashboard.css";
 import "./Theme.css";
-import logo from "./assets/logo.png";
-import mascot from "./assets/mascot.png";
+import logo from "./assets/Logo.png";
+import mascot from "./assets/Mascot.png";
 import find from "./assets/find.png";
 import stocks from "./assets/stocks.png";
 import sleep from "./assets/sleep.png";
 import AddItemModal from "./Additemmodal";
 import Watchlist from "./Watchlist";
 import Collection from "./Collection";
-import BoughtSavings from "./BoughtSavings";
+import BoughtSavings from "./Boughtsavings";
 import Settings from "./Settings";
 import { statsFor } from "./Collectionstats";
 import DashboardHome, { Notifications } from "./Dashboardhome";
+
+import { onAuthStateChanged } from "firebase/auth";
+import { auth, addItem, listenItems, updateItem, deleteItem } from "./firebase/firebase";
 
 const Icon = ({ children }) => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -70,9 +73,10 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
   const [open, setOpen] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
   const [quickUrl, setQuickUrl] = useState("");
-  const [items, setItems] = useState([]);
   const [collections, setCollections] = useState([]);
   const [focusId, setFocusId] = useState(null);
+
+  const [items, setItems] = useState([]);
 
   // Light / Dark / Match device. The result is set on <html data-theme="light|dark"> (styles are in Theme.css).
   useEffect(() => {
@@ -112,6 +116,62 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
   const isLast = step === STEPS.length - 1;
   const next = () => (isLast ? setOpen(false) : setStep(step + 1));
 
+    // Listen for items in the database
+      useEffect(() => {
+      let unsubscribeItems = () => {};
+      const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+  
+        unsubscribeItems();
+  
+        if (user) {
+          unsubscribeItems = listenItems(user.uid, (data) => {
+            setItems(data);
+          });
+        } else {
+          setItems([]);
+        }
+      });
+      return () => {
+        unsubscribeAuth();
+        unsubscribeItems();
+      };
+    }, []);
+  
+    // additem 
+    const handleAddItem = async (item) => {
+    const user = auth.currentUser;
+  
+      if (!user) {
+        alert("Please log in first.");
+        return;
+      }
+  
+      await addItem(user.uid, item);
+      };
+      
+      //updateItim
+      const handleUpdateItem = async (item) => {
+      const user = auth.currentUser;
+  
+      if (!user) return;
+  
+      const { id, ...updatedData } = item;
+      await updateItem(user.uid, id, updatedData);
+  
+      };
+  
+      // deleteItem
+      const handleDeleteItems = async (ids) => {
+        const user = auth.currentUser;
+  
+        if (!user) return;
+  
+        await Promise.all(
+          ids.map((id) => deleteItem(user.uid, id))
+        );
+  
+      };
+
   return (
     <div className="db-app">
       {/* ---------- Sidebar ---------- */}
@@ -146,14 +206,20 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
       {/* ---------- Main ---------- */}
       <main className="db-main">
         {active === "Watchlist" ? (
+
+          // firebase added
           <Watchlist
             items={items}
             collections={collectionNames}
             openId={focusId}
             onOpened={() => setFocusId(null)}
+            onUpdate={(u) => setItems((prev) =>
+              prev.map((i) => (i.id === u.id ? u : i))
+            )}
+            onDelete={(ids) => setItems((prev) =>
+              prev.filter((i) => !ids.includes(i.id))
+            )}
             onAdd={() => openAdd()}
-            onUpdate={(u) => setItems((prev) => prev.map((i) => (i.id === u.id ? u : i)))}
-            onDelete={(ids) => setItems((prev) => prev.filter((i) => !ids.includes(i.id)))}
           />
         ) : active === "Bought and Savings" ? (
           <BoughtSavings tools={tools} />
@@ -210,7 +276,15 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
           initialUrl={quickUrl}
           collections={collectionNames}
           onClose={() => setAddOpen(false)}
-          onSave={(item) => setItems((prev) => [{ id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, image: null, alert: true, ...item }, ...prev])}
+          
+          // operational add item fixed(reeal)
+          onSave={async (item) => {
+            await handleAddItem({
+              image: null,
+              alert: true,
+              ...item
+            });
+          }}
         />
       )}
 

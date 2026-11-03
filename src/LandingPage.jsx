@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import "./LandingPage.css";
-import logo from "./assets/logo.png";
-import mascot from "./assets/mascot.png";
+import logo from "./assets/Logo.png";
+import mascot from "./assets/Mascot.png";
 import seal from "./assets/bulsu.png";
 
 const NAV_ITEMS = [

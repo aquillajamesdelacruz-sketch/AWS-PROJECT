@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import "./Watchlist.css";
 import "./Collection.css";
-import mascot from "./assets/mascot.png";
+import mascot from "./assets/Mascot.png";
 import sleep from "./assets/sleep.png";
 import { CardView, Modal } from "./Watchlist";
 import { COLORS, statsFor } from "./Collectionstats";

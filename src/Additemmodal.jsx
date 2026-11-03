@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import "./Additemmodal.css";
 import find from "./assets/find.png";
-import mascot from "./assets/mascot.png";
+import mascot from "./assets/Mascot.png";
 
 const STEPS = ["Paste link", "Confirm details", "Track"];
 const STORES = { shopee: "Shopee", lazada: "Lazada", amazon: "Amazon", tiktok: "TikTok Shop" };
@@ -32,6 +32,8 @@ export default function AddItemModal({ initialUrl = "", collections = [], onClos
   const [target, setTarget] = useState("");
   const [collection, setCollection] = useState(collections[0] || "");
   const [toast, setToast] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const step = phase === "success" ? 2 : phase === "confirm" ? 1 : 0;
   const store = detectStore(url);
@@ -40,10 +42,10 @@ export default function AddItemModal({ initialUrl = "", collections = [], onClos
   useEffect(() => {
     if (phase !== "fetching") return;
     const t = setTimeout(() => {
-      setName("Mechanical Keyboard, hot-swap");
-      setPrice("2799");
+      setName(" ");
+      setPrice(" ");
       setOriginal(3499);
-      setTarget("2500");
+      setTarget(" ");
       setPhase("confirm");
     }, 1700);
     return () => clearTimeout(t);
@@ -55,10 +57,31 @@ export default function AddItemModal({ initialUrl = "", collections = [], onClos
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const save = () => {
-    onSave?.({ image: keyboard /* demo photo: use the image from your real fetch */, name, url, store, original: Math.max(original, parse(price)), price: parse(price), target: parse(target), collection });
-    setToast(true);
-    setPhase("success");
+  // Save the confirmed product details
+  const save = async () => {
+    setSaveError("");
+    setSaving(true);
+
+    try {
+      await onSave?.({
+        image: null,
+        name: name.trim(),
+        url,
+        store,
+        original: Math.max(original, parse(price)),
+        price: parse(price),
+        target: parse(target),
+        collection,
+        alert: true
+      });
+
+      setToast(true);
+      setPhase("success");
+    } catch (error) {
+      setSaveError(error.message || "Could not save this item. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const reset = () => {
@@ -151,7 +174,9 @@ export default function AddItemModal({ initialUrl = "", collections = [], onClos
 
             <div className="ai-actions ai-actions--end">
               <button type="button" className="ai-btn ai-btn--ghost" onClick={onClose}>Cancel</button>
-              <button type="button" className="ai-btn ai-btn--primary" onClick={save} disabled={!name.trim()}>Save and track</button>
+              <button type="button" className="ai-btn ai-btn--primary" onClick={save} disabled={!name.trim() || saving}>
+                {saving ? "Saving..." : "Save and track"}
+              </button>
             </div>
           </>
         )}

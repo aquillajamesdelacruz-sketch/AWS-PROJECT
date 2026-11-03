@@ -37,6 +37,7 @@ export function Notifications({ onClose }) {
     { id: 2, text: "Desk Lamp went up to ₱1,150", time: "1 day ago", color: "#ef4444", unread: true },
     { id: 3, text: "Fake sale detected on Everyday Backpack", time: "3 days ago", color: "#1e3a8a", unread: true },
   ]);
+  
   const ref = useRef(null);
 
   useEffect(() => {
