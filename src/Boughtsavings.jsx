@@ -2,18 +2,7 @@ import { useState } from "react";
 import "./Watchlist.css";
 import "./Boughtsavings.css";
 
-const MONTHS = ["Jun", "Jul", "Aug", "Sep", "Oct"];
-
-// Sample purchases. Replace with real data when you track what the user buys.
-const SAMPLE_PURCHASES = [
-  { id: 1, name: "Wireless Earbuds", store: "Lazada", paid: 899, saved: 350, month: "Oct", icon: "headphones" },
-  { id: 2, name: "Yoga Mat", store: "Shopee", paid: 650, saved: 200, month: "Oct", icon: "mat" },
-  { id: 3, name: "Desk Lamp", store: "Shopee", paid: 1299, saved: 850, month: "Oct", icon: "bag" },
-  { id: 4, name: "Mechanical Keyboard", store: "Shopee", paid: 4100, saved: 990, month: "Sep", icon: "bag" },
-  { id: 5, name: "Noise-Cancelling Headphones", store: "Lazada", paid: 4302, saved: 700, month: "Aug", icon: "headphones" },
-  { id: 6, name: "Adidas Samba OG", store: "Shopee", paid: 3899, saved: 780, month: "Jul", icon: "bag" },
-  { id: 7, name: "Everyday Backpack", store: "Lazada", paid: 3301, saved: 450, month: "Jun", icon: "bag" },
-];
+import { lastMonths, monthKey } from "./Dashboardstats";
 
 const peso = (n) => "₱" + Math.round(n).toLocaleString("en-PH");
 const sum = (list, key) => list.reduce((t, i) => t + i[key], 0);
@@ -26,13 +15,15 @@ const Icon = ({ type }) => (
   </svg>
 );
 
-export default function BoughtSavings({ purchases = SAMPLE_PURCHASES, tools }) {
+// changed: `purchases` now comes from Firebase (users/{uid}/purchases) instead of sample data.
+export default function BoughtSavings({ purchases = [], tools }) {
   const [showAll, setShowAll] = useState(false);
 
   const totalSaved = sum(purchases, "saved");
   const totalSpent = sum(purchases, "paid");
   const avgDiscount = totalSaved + totalSpent ? Math.round((totalSaved / (totalSaved + totalSpent)) * 100) : 0;
-  const monthly = MONTHS.map((m) => ({ m, v: sum(purchases.filter((p) => p.month === m), "saved") }));
+  // last 6 real calendar months; each purchase is placed in the month it was bought (boughtAt)
+  const monthly = lastMonths(6).map(({ key, label }) => ({ m: label, v: sum(purchases.filter((p) => monthKey(p.boughtAt) === key), "saved") }));
   const thisMonth = monthly[monthly.length - 1].v;
   const max = Math.max(...monthly.map((x) => x.v), 1);
   const rows = showAll ? purchases : purchases.slice(0, 2);
@@ -49,7 +40,9 @@ export default function BoughtSavings({ purchases = SAMPLE_PURCHASES, tools }) {
       </section>
 
       <section className="bs-banner">
-        <h2>You saved <span>{peso(thisMonth)}</span> this month! Pixie is very proud.</h2>
+        {thisMonth > 0
+          ? <h2>You saved <span>{peso(thisMonth)}</span> this month! Pixie is very proud.</h2>
+          : <h2>Nothing bought this month yet. Pixie is waiting for the right price!</h2>}
         <p>A little patience. A very happy fox.</p>
       </section>
 
@@ -71,10 +64,11 @@ export default function BoughtSavings({ purchases = SAMPLE_PURCHASES, tools }) {
 
       <section className="bs-card bs-table">
         <h2>Purchases</h2>
+        {purchases.length === 0 && <p>No purchases yet. Open an item in your Watchlist and tap “Mark as bought”.</p>}
         <div className="bs-row bs-row--head"><span>ITEM</span><span>STORE</span><span>PAID</span><span>SAVED</span></div>
         {rows.map((p) => (
           <div className="bs-row" key={p.id}>
-            <span className="bs-item"><Icon type={p.icon} /><b>{p.name}</b></span>
+            <span className="bs-item"><Icon /><b>{p.name}</b></span>
             <span className="bs-store">{p.store}</span>
             <span>Paid {peso(p.paid)}</span>
             <span className="bs-saved">Saved {peso(p.saved)}</span>

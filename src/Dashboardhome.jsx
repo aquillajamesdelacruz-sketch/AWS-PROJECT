@@ -1,20 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import "./Dashboardhome.css";
+import { storeBreakdown, biggestDrop, topWatched, dropPercent, totalSaved, savedPercent, savingsTrend, trendPath } from "./Dashboardstats";
 
 const peso = (n) => "₱" + Number(n).toLocaleString("en-PH", { minimumFractionDigits: 0 });
 
-// Sample data. Add an `image` URL to any item to show a real product photo.
-const SAMPLE_WATCHLIST = [
-  { name: "Adidas Samba OG", price: 3799, drop: 20 },
-  { name: "Mechanical Keyboard", price: 3799, drop: 20 },
-  { name: "Adidas Samba OG", price: 3799, drop: 20 },
-];
-const COLLECTIONS = [
-  { name: "Desk Setup", target: 22000, progress: 0.54, icon: "box" },
-  { name: "Birthday Gifts", target: 10000, progress: 0.32, icon: "gift" },
-  { name: "Graduation Gifts", target: 5000, progress: 0.2, icon: "gift" },
-];
-const STORE_COLORS = ["#f59e0b", "#1e1b4b", "#10b981", "#94a3b8"];
+const today = () => new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 
 function Thumb({ image, alt, className = "" }) {
   return image ? <img className={`dh-thumb ${className}`} src={image} alt={alt} />
@@ -68,14 +58,18 @@ export function Notifications({ onClose }) {
   );
 }
 
-export default function DashboardHome({ added = [], collections = [], onQuickAdd }) {
-  const collectionRows = collections.length
-    ? collections.map((c) => ({ name: c.name, target: c.goal, progress: c.progress, icon: "box" }))
-    : COLLECTIONS;
+// changed: the page now receives the raw Firebase data (items + purchases) and calculates
+// every number/chart from it, so it updates live when the database changes.
+export default function DashboardHome({ items = [], purchases = [], collections = [], onQuickAdd, onViewItem }) {
   const [url, setUrl] = useState("");
-  const latest = added[0];
-  const watchlist = [...added.map((a) => ({ name: a.name.split(",")[0], price: a.price, drop: 20, image: a.image })), ...SAMPLE_WATCHLIST].slice(0, 3);
-  const tracking = 9 + added.length;
+
+  const stores = storeBreakdown(items);                       // "Current Stores" dots
+  const drop = biggestDrop(items);                            // "Today's Biggest Drop" card
+  const watched = topWatched(items, 3);                       // "Price Watchlist" card
+  const saved = totalSaved(items, purchases);                 // "Total Saved" amount
+  const savedPct = savedPercent(items, purchases);            // badge next to the amount
+  const trend = savingsTrend(items, purchases, 7);            // last 7 days, running total
+  const chart = trendPath(trend);                             // SVG path for the trend
 
   const quickAdd = (e) => {
     e.preventDefault();
@@ -98,12 +92,14 @@ export default function DashboardHome({ added = [], collections = [], onQuickAdd
         <div className="dh-insights">
           <h2>Quick Insights</h2>
           <div className="dh-insights__row">
-            <div className="dh-stat"><span className="dh-stat__icon" /><p>Currently Tracking<br /><b>{tracking} Items</b></p></div>
-            <div className="dh-stat"><span className="dh-stat__icon" /><p>Currently Collecting<br /><b>{collections.length || 5} Collections</b></p></div>
+            <div className="dh-stat"><span className="dh-stat__icon" /><p>Currently Tracking<br /><b>{items.length} {items.length === 1 ? "Item" : "Items"}</b></p></div>
+            <div className="dh-stat"><span className="dh-stat__icon" /><p>Currently Collecting<br /><b>{collections.length} {collections.length === 1 ? "Collection" : "Collections"}</b></p></div>
           </div>
           <div className="dh-stores">
             Current Stores
-            <span>{STORE_COLORS.map((c) => <i key={c} style={{ background: c }} />)}</span>
+            {/* one dot per store that has items; hover for the store name and item count */}
+            <span>{stores.map((st) => <i key={st.store} style={{ background: st.color }} title={`${st.store}: ${st.count} ${st.count === 1 ? "item" : "items"}`} />)}</span>
+            <small>{stores.length ? stores.map((st) => `${st.store} (${st.count})`).join(", ") : "None yet"}</small>
           </div>
         </div>
       </section>
@@ -111,29 +107,36 @@ export default function DashboardHome({ added = [], collections = [], onQuickAdd
       <section className="dh-mid">
         <article className="dh-drop">
           <header>
-            <div><h2>Today’s Biggest Drop</h2><p>as of October 13, 2026</p></div>
+            <div><h2>Today’s Biggest Drop</h2><p>as of {today()}</p></div>
             <button type="button" aria-label="More options">•••</button>
           </header>
-          <div className="dh-drop__item">
-            <Thumb image={latest?.image} alt="" className="dh-drop__img" />
-            <div>
-              <h3>Mechanical Keyboard</h3>
-              <small>Keychron K6</small>
-              <s>₱3,499</s>
-              <div className="dh-price"><b>₱2,799</b><span className="dh-badge">↓20%</span></div>
-            </div>
-          </div>
-          <button type="button" className="dh-btn dh-btn--wide">View Peek</button>
+          {drop ? (
+            <>
+              <div className="dh-drop__item">
+                <Thumb image={drop.item.image} alt="" className="dh-drop__img" />
+                <div>
+                  <h3>{drop.item.name.split(",")[0]}</h3>
+                  <small>{drop.item.store || "Tracked item"}</small>
+                  <s>{peso(drop.item.original)}</s>
+                  <div className="dh-price"><b>{peso(drop.item.price)}</b><span className="dh-badge">↓{drop.percent}%</span></div>
+                </div>
+              </div>
+              <button type="button" className="dh-btn dh-btn--wide" onClick={() => onViewItem?.(drop.item.id)}>View Peek</button>
+            </>
+          ) : (
+            <p className="dh-none">No price drops yet. Pixie is watching!</p>
+          )}
         </article>
 
         <article className="dh-saved">
           <header><h2>Total Saved</h2><span>PHP</span></header>
-          <div className="dh-saved__amount"><b>₱4,320.00</b><span className="dh-badge">+12%</span></div>
-          <svg viewBox="0 0 572 130" preserveAspectRatio="none" role="img" aria-label="Savings trend chart">
+          <div className="dh-saved__amount"><b>{peso(saved)}</b>{savedPct > 0 && <span className="dh-badge">{savedPct}%</span>}</div>
+          <svg viewBox="0 0 572 130" preserveAspectRatio="none" role="img" aria-label={`Savings over the last 7 days, now ${peso(saved)}`}>
             <defs><linearGradient id="dh-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#f97316" stopOpacity=".55" /><stop offset="1" stopColor="#f97316" stopOpacity=".05" /></linearGradient></defs>
             {[10, 62, 114].map((y) => <line key={y} x1="0" x2="572" y1={y} y2={y} stroke="#fff" strokeOpacity=".8" />)}
-            <path d="M0 110C30 100 40 82 60 90S90 118 120 100 160 92 200 82s60 6 80 -4 30-60 70-60 50 44 90 40 60-15 100-26 22-16 32-26V130H0z" fill="url(#dh-fill)" />
-            <path d="M0 110C30 100 40 82 60 90S90 118 120 100 160 92 200 82s60 6 80 -4 30-60 70-60 50 44 90 40 60-15 100-26 22-16 32-26" fill="none" stroke="#f97316" strokeWidth="3" strokeLinecap="round" />
+            {/* both paths come from the real savings trend (last 7 days) */}
+            <path d={chart.area} fill="url(#dh-fill)" />
+            <path d={chart.line} fill="none" stroke="#f97316" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
           </svg>
           <p>Here’s how much you’ve saved so far!</p>
         </article>
@@ -142,20 +145,21 @@ export default function DashboardHome({ added = [], collections = [], onQuickAdd
       <section className="dh-bottom">
         <article className="dh-card dh-list">
           <header><h2>Collections</h2><a href="#collections">View All →</a></header>
-          {collectionRows.map((c) => (
-            <div className="dh-coll" key={c.name}>
-              <div><CollectionIcon type={c.icon} /><b>{c.name}</b><small>Target Total Price: <strong>{peso(c.target)}</strong></small></div>
-              <div className="dh-bar" role="progressbar" aria-valuenow={Math.round(c.progress * 100)} aria-valuemin="0" aria-valuemax="100"><i style={{ width: `${c.progress * 100}%` }} /></div>
+          {collections.length === 0 && <p className="dh-none">No collections yet.</p>}
+          {collections.map((c) => (
+            <div className="dh-coll" key={c.id || c.name}>
+              <div><CollectionIcon type="box" /><b>{c.name}</b><small>Target Total Price: <strong>{peso(c.goal)}</strong></small></div>
+              <div className="dh-bar" role="progressbar" aria-valuenow={Math.round(c.progress * 100)} aria-valuemin="0" aria-valuemax="100"><i style={{ width: `${c.progress * 100}%`, background: c.color }} /></div>
             </div>
           ))}
         </article>
 
         <article className="dh-card dh-list">
           <header><h2>Price Watchlist</h2><a href="#watchlist">View All →</a></header>
-          {watchlist.map((w, i) => (
-            <div className="dh-watch" key={i}>
+          {watched.map((w) => (
+            <div className="dh-watch" key={w.id}>
               <Thumb image={w.image} alt="" />
-              <div><p>{w.name}</p><div className="dh-price"><b>{peso(w.price)}</b><span className="dh-badge">↓{w.drop}%</span></div></div>
+              <div><p>{w.name.split(",")[0]}</p><div className="dh-price"><b>{peso(w.price)}</b>{dropPercent(w) > 0 && <span className="dh-badge">↓{dropPercent(w)}%</span>}</div></div>
             </div>
           ))}
         </article>

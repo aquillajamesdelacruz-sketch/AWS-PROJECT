@@ -97,3 +97,7 @@
   .dh-top, .dh-mid, .dh-bottom { grid-template-columns: 1fr; }
   .dh-insights { border-left: 0; padding: 16px 0 0; }
 }
+/* added: empty states + store names under the "Current Stores" dots */
+.dh-none { margin: 12px 0; font-size: 14px; color: #64748b; }
+.dh-stores { flex-wrap: wrap; }
+.dh-stores small { flex-basis: 100%; text-align: right; color: #64748b; font-size: 12px; }

@@ -15,7 +15,12 @@ import { statsFor } from "./Collectionstats";
 import DashboardHome, { Notifications } from "./Dashboardhome";
 
 import { onAuthStateChanged } from "firebase/auth";
-import { auth, addItem, listenItems, updateItem, deleteItem } from "./firebase/firebase";
+import {
+  auth, addItem, listenItems, updateItem, deleteItem,
+  addCollection, listenCollections, deleteCollections, updateUser, deleteUser,
+  listenPurchases, markAsBought
+} from "./firebase/firebase";
+import { deleteUser as deleteAuthUser } from "firebase/auth";
 
 const Icon = ({ children }) => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -77,6 +82,7 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
   const [focusId, setFocusId] = useState(null);
 
   const [items, setItems] = useState([]);
+  const [purchases, setPurchases] = useState([]);   // added: bought items from Firebase (feeds the savings charts)
 
   // Light / Dark / Match device. The result is set on <html data-theme="light|dark"> (styles are in Theme.css).
   useEffect(() => {
@@ -116,24 +122,36 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
   const isLast = step === STEPS.length - 1;
   const next = () => (isLast ? setOpen(false) : setStep(step + 1));
 
-    // Listen for items in the database
+    // Listen for items AND collections in the database
       useEffect(() => {
       let unsubscribeItems = () => {};
+      let unsubscribeCollections = () => {};   // added: collections listener
+      let unsubscribePurchases = () => {};     // added: purchases listener
       const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
   
         unsubscribeItems();
+        unsubscribeCollections();
+        unsubscribePurchases();
   
         if (user) {
           unsubscribeItems = listenItems(user.uid, (data) => {
             setItems(data);
           });
+          // added: real-time collections, replaces the old local-only state
+          unsubscribeCollections = listenCollections(user.uid, setCollections);
+          // added: real-time purchases, so Bought and Savings + Dashboard totals update live
+          unsubscribePurchases = listenPurchases(user.uid, setPurchases);
         } else {
           setItems([]);
+          setCollections([]);
+          setPurchases([]);
         }
       });
       return () => {
         unsubscribeAuth();
         unsubscribeItems();
+        unsubscribeCollections();
+        unsubscribePurchases();
       };
     }, []);
   
@@ -146,7 +164,14 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
         return;
       }
   
-      await addItem(user.uid, item);
+      // added: seed the price history so the charts have a starting point.
+      // Two entries (original -> current) record the discount already present when added.
+      const now = Date.now();
+      const history = item.original > item.price
+        ? [{ price: item.original, at: now }, { price: item.price, at: now }]
+        : [{ price: item.price, at: now }];
+
+      await addItem(user.uid, { ...item, history });
       };
       
       //updateItim
@@ -156,6 +181,17 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
       if (!user) return;
   
       const { id, ...updatedData } = item;
+
+      // added: when the price changed, append it to the item's history.
+      // The price charts and "Total Saved" trend are built from this list.
+      const old = items.find((i) => i.id === id);
+      if (old && Number(old.price) !== Number(updatedData.price)) {
+        const history = Array.isArray(old.history) && old.history.length
+          ? old.history
+          : [{ price: old.price, at: old.createdAt || Date.now() }];
+        updatedData.history = [...history, { price: updatedData.price, at: Date.now() }];
+      }
+
       await updateItem(user.uid, id, updatedData);
   
       };
@@ -171,6 +207,54 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
         );
   
       };
+
+  // added: "Mark as bought" -> moves the item into users/{uid}/purchases
+  const handleBought = async (item) => {
+    const user = auth.currentUser;
+    if (!user) return;
+    await markAsBought(user.uid, item, item.price);
+  };
+
+  // added: create a collection in Firebase (the listener above refreshes the UI)
+  const handleCreateCollection = async (collection) => {
+    const user = auth.currentUser;
+    if (!user) return;
+    await addCollection(user.uid, collection);
+  };
+
+  // added: delete collections. Items inside are kept, but their collection is cleared.
+  const handleDeleteCollections = async (ids) => {
+    const user = auth.currentUser;
+    if (!user) return;
+    const names = collections.filter((c) => ids.includes(c.id)).map((c) => c.name);
+    await deleteCollections(user.uid, ids, names);
+  };
+
+  // added: save the display name to users/{uid}. Called when the Settings name input changes.
+  // (Not awaited on every keystroke by the UI; failures are only logged.)
+  const handleNameChange = (name) => {
+    setUserName(name);
+    const user = auth.currentUser;
+    if (user) updateUser(user.uid, name, undefined).catch(console.error);
+  };
+
+  // added: delete the profile record + the auth account, then let App return to the landing page
+  const handleDeleteAccount = async () => {
+    const user = auth.currentUser;
+    try {
+      if (user) {
+        await deleteUser(user.uid);       // removes users/{uid} (items + collections live inside it)
+        await deleteAuthUser(user);       // removes the login itself
+      }
+    } catch (error) {
+      // Firebase refuses this if the login is old ("requires-recent-login")
+      alert(error.code === "auth/requires-recent-login"
+        ? "Please log in again, then retry deleting your account."
+        : error.message);
+      return;
+    }
+    onDeleteAccount?.();
+  };
 
   return (
     <div className="db-app">
@@ -213,36 +297,29 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
             collections={collectionNames}
             openId={focusId}
             onOpened={() => setFocusId(null)}
-            onUpdate={(u) => setItems((prev) =>
-              prev.map((i) => (i.id === u.id ? u : i))
-            )}
-            onDelete={(ids) => setItems((prev) =>
-              prev.filter((i) => !ids.includes(i.id))
-            )}
+            onUpdate={handleUpdateItem}
+            onDelete={handleDeleteItems}
+            onBought={handleBought}
             onAdd={() => openAdd()}
           />
         ) : active === "Bought and Savings" ? (
-          <BoughtSavings tools={tools} />
+          <BoughtSavings purchases={purchases} tools={tools} />
         ) : active === "Settings" ? (
           <Settings
             userName={userName}
-            onNameChange={setUserName}
+            onNameChange={handleNameChange}
             settings={settings}
             onSettings={(patch) => setSettings((prev) => ({ ...prev, ...patch }))}
             items={items}
-            onDeleteAccount={onDeleteAccount}
+            onDeleteAccount={handleDeleteAccount}
           />
         ) : active === "Collection" ? (
           <Collection
             items={items}
             collections={collections}
             onAddItem={() => openAdd()}
-            onCreate={(c) => setCollections((prev) => [...prev, { id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, ...c }])}
-            onDelete={(ids) => {
-              const gone = collections.filter((c) => ids.includes(c.id)).map((c) => c.name);
-              setCollections((prev) => prev.filter((c) => !ids.includes(c.id)));
-              setItems((prev) => prev.map((i) => (gone.includes(i.collection) ? { ...i, collection: "" } : i)));
-            }}
+            onCreate={handleCreateCollection}
+            onDelete={handleDeleteCollections}
             onViewItem={(id) => { setFocusId(id); setActive("Watchlist"); }}
           />
         ) : (
@@ -257,7 +334,13 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
           </header>
 
           {items.length > 0 ? (
-            <DashboardHome added={items} collections={collectionSummaries} onQuickAdd={openAdd} />
+            <DashboardHome
+              items={items}
+              purchases={purchases}
+              collections={collectionSummaries}
+              onQuickAdd={openAdd}
+              onViewItem={(id) => { setFocusId(id); setActive("Watchlist"); }}
+            />
           ) : (
             <section className="db-empty" aria-labelledby="db-empty-title">
               <img className="db-empty__fox" src={sleep} alt="Pixie sleeping" />

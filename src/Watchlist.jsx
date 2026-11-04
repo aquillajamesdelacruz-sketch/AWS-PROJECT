@@ -3,6 +3,7 @@ import "./Watchlist.css";
 import mascot from "./assets/Mascot.png";
 import find from "./assets/find.png";
 import sleep from "./assets/sleep.png";
+import { timeAgo } from "./Dashboardstats";
 
 /* ---------- helpers ---------- */
 const parse = (v) => Number(String(v).replace(/[^0-9.]/g, "")) || 0;
@@ -16,13 +17,15 @@ const progress = (it) => {
   if (span <= 0) return it.price <= it.target ? 1 : 0;
   return Math.min(1, Math.max(0, (it.original - it.price) / span));
 };
-// Demo history that walks from the original price to the current one. Replace with real data.
-const historyOf = (it) =>
-  Array.from({ length: 12 }, (_, i) => {
-    const t = i / 11;
-    const wobble = Math.sin(i * 1.4) * 0.05 * it.original * (1 - t);
-    return i === 11 ? it.price : it.original + (it.price - it.original) * t + wobble;
-  });
+// Real price history saved in Firebase (item.history = [{ price, at }]).
+// Items saved before history existed fall back to a simple original -> current line.
+// The chart needs at least 2 points, so a single entry is repeated.
+const historyOf = (it) => {
+  const h = Array.isArray(it.history) && it.history.length
+    ? it.history
+    : [{ price: it.original, at: it.createdAt }, { price: it.price, at: it.createdAt }];
+  return h.length > 1 ? h : [h[0], h[0]];
+};
 
 function useEscape(fn) {
   useEffect(() => {
@@ -115,15 +118,22 @@ function UpdateItem({ item, collections, onClose, onSave }) {
 }
 
 /* ---------- product details / price history ---------- */
-function ProductModal({ item, onClose, onEdit, onDelete, onUpdate }) {
+function ProductModal({ item, onClose, onEdit, onDelete, onUpdate, onBought }) {
   const [tab, setTab] = useState("details");
-  const hist = useMemo(() => historyOf(item), [item]);
+  // changed: everything below is calculated from the item's real history (not demo data)
+  const entries = useMemo(() => historyOf(item), [item]);
+  const hist = entries.map((e) => Number(e.price) || 0);
+  const n = hist.length;
   const lo = Math.min(...hist), hi = Math.max(...hist);
-  const last = hist[11] - hist[10];
+  const last = hist[n - 1] - hist[n - 2];                 // most recent price change
+  const lastChangeAt = entries[n - 1].at;                 // when it happened
   const saved = item.original - item.price;
+  // how many price drops in a row, counting back from the newest entry (for Pixie's tip)
+  let dropsInRow = 0;
+  for (let i = n - 1; i > 0 && hist[i] < hist[i - 1]; i--) dropsInRow++;
 
   const W = 720, H = 140, min = lo - (hi - lo) * 0.15, max = hi + (hi - lo) * 0.1 || hi + 1;
-  const pts = hist.map((v, i) => [(i / 11) * W, H - ((v - min) / (max - min)) * H]);
+  const pts = hist.map((v, i) => [(i / (n - 1)) * W, H - ((v - min) / (max - min)) * H]);
   const line = pts.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`).join(" ");
 
   return (
@@ -149,7 +159,7 @@ function ProductModal({ item, onClose, onEdit, onDelete, onUpdate }) {
               {saved > 0 && <span className="wl-pill wl-pill--green">Down by {peso(saved)}</span>}
             </div>
             <div className="wl-metaRow">
-              <span className="wl-chip">Last update: <b>just now</b></span>
+              <span className="wl-chip">Last update: <b>{timeAgo(lastChangeAt || item.createdAt)}</b></span>
               <span className="wl-orange">{item.price <= item.target ? "Target reached!" : `${peso(toTarget(item))} to target!`}</span>
             </div>
             <ProgressBar item={item} />
@@ -172,7 +182,7 @@ function ProductModal({ item, onClose, onEdit, onDelete, onUpdate }) {
             </svg>
           </div>
           <div className="wl-stats">
-            {[["Total Change", "since last added", saved], ["Last Change", "3 days ago", Math.abs(last)], ["Lowest Price", "since last added", lo], ["Highest Price", "3 days ago", hi]].map(([t, s, v]) => (
+            {[["Total Change", "since last added", Math.abs(saved)], ["Last Change", timeAgo(lastChangeAt || item.createdAt), Math.abs(last)], ["Lowest Price", "since last added", lo], ["Highest Price", "since last added", hi]].map(([t, s, v]) => (
               <div key={t}><b>{t}</b><small>{s}</small><strong className={t === "Last Change" && last > 0 ? "is-red" : ""}>{compact(v)}</strong></div>
             ))}
           </div>
@@ -183,11 +193,13 @@ function ProductModal({ item, onClose, onEdit, onDelete, onUpdate }) {
         {tab === "history" && (
           <div className="wl-tip">
             <img src={mascot} alt="Pixie" />
-            <div><b>Pixie’s Tip:</b><p>{saved > 0 ? "The price is dropping for 3 consecutive days! It is possible that it will go lower. However, be alert!" : "The price hasn’t dropped yet. I’ll keep watching it for you."}</p></div>
+            <div><b>Pixie’s Tip:</b><p>{dropsInRow >= 2 ? `The price has dropped ${dropsInRow} times in a row! It is possible that it will go lower. However, be alert!` : saved > 0 ? "The price is lower than when you added it. I’ll keep watching for more." : "The price hasn’t dropped yet. I’ll keep watching it for you."}</p></div>
           </div>
         )}
         <div className="wl-actions wl-actions--end">
           <button type="button" className="wl-btn wl-btn--outline-red" onClick={onDelete}>Delete Item</button>
+          {/* added: moves the item to "Bought and Savings" */}
+          {onBought && <button type="button" className="wl-btn wl-btn--ghost" onClick={() => onBought(item)}>Mark as bought</button>}
           <button type="button" className="wl-btn wl-btn--primary" onClick={onEdit}>Edit Item</button>
         </div>
       </div>
@@ -250,7 +262,7 @@ function ListView({ items, edit, selected, toggle, open, sort, setSort }) {
 }
 
 /* ---------- page ---------- */
-export default function Watchlist({ items, collections = [], openId, onOpened, onAdd, onUpdate, onDelete }) {
+export default function Watchlist({ items, collections = [], openId, onOpened, onAdd, onUpdate, onDelete, onBought }) {
   const [view, setView] = useState("card");
   const [query, setQuery] = useState("");
   const [edit, setEdit] = useState(false);
@@ -322,6 +334,7 @@ export default function Watchlist({ items, collections = [], openId, onOpened, o
 
       {detail && !editing && !confirm && (
         <ProductModal item={detail} onClose={() => setDetailId(null)} onUpdate={onUpdate}
+          onBought={(it) => { onBought?.(it); setDetailId(null); }}
           onEdit={() => setEditingId(detail.id)} onDelete={() => setConfirm([detail.id])} />
       )}
       {editing && <UpdateItem item={editing} collections={collections} onClose={() => setEditingId(null)} onSave={(u) => { onUpdate(u); setEditingId(null); }} />}
