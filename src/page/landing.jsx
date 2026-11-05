@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import "./LandingPage.css";
-import logo from "./assets/Logo.png";
-import mascot from "./assets/Mascot.png";
-import seal from "./assets/bulsu.png";
+import { useNavigate } from "react-router-dom";
+import "./landing.css";
+import logo from "../assets/Logo.png";
+import mascot from "../assets/Mascot.png";
+import seal from "../assets/bulsu.png";
 
 const NAV_ITEMS = [
   { label: "Home", id: "home" },
@@ -54,8 +55,9 @@ const FEATURES = [
   { title: "Savings Tracker", text: "Keep track of how much you've saved this month.", Icon: BagIcon },
 ];
 
-export default function LandingPage({ onSignUp, onStartTracking }) {
+export default function LandingPage() {
   const [active, setActive] = useState("home");
+  const navigate = useNavigate();
 
   // Highlight the nav link of the section currently in view
   useEffect(() => {
@@ -92,7 +94,7 @@ export default function LandingPage({ onSignUp, onStartTracking }) {
                 ))}
               </nav>
 
-              <button type="button" className="pf-btn pf-signup" onClick={onSignUp}>Sign Up</button>
+              <button type="button" className="pf-btn pf-signup" onClick={() => navigate("/register")}>Sign Up</button>
             </header>
 
             <h1 className="pf-wordmark" aria-label="PeekyFox">
@@ -106,7 +108,7 @@ export default function LandingPage({ onSignUp, onStartTracking }) {
                 <span className="pf-tagline__accent">Smartest Version</span>
                 of your shopping
               </h2>
-              <button type="button" className="pf-btn pf-cta" onClick={onStartTracking}>Start Tracking</button>
+              <button type="button" className="pf-btn pf-cta" onClick={() => navigate("/login")}>Start Tracking</button>
             </div>
 
             <img className="pf-mascot" src={mascot} alt="PeekyFox mascot waving" />
@@ -208,7 +210,7 @@ export default function LandingPage({ onSignUp, onStartTracking }) {
             <div className="pf-footer__cta">
               <h3>Ready to start tracking?</h3>
               <p>PeekyFox helps shoppers save time, spot better deals, and keep every price move in one place.</p>
-              <button type="button" className="pf-btn pf-cta" onClick={onStartTracking}>Start Tracking</button>
+              <button type="button" className="pf-btn pf-cta" onClick={() => navigate("/login")}>Start Tracking</button>
             </div>
           </div>
 

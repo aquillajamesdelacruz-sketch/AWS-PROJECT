@@ -1,65 +1,81 @@
-import { useEffect, useState } from "react";
-import LandingPage from "./LandingPage";
-import LogIn from "./LogIn";
-import SignUp from "./Signup";
-import Dashboard from "./Dashboard";
-import { watchAuth, getUserProfile } from "./firebase/firebase";
+import { lazy, Suspense, useEffect, useState } from "react";
+import { Navigate, Route, Routes } from "react-router-dom";
+import { auth, getUserProfile, watchAuth } from "./lib/firebase.js";
+import { GuestOnly, RequireAuth } from "./Layout/RouteGuards.jsx";
+import "./App.css";
 
-// Turns "bea.shainne@mail.com" into "Bea Shainne"
+const LandingPage = lazy(() => import("./page/landing.jsx"));
+const LoginPage = lazy(() => import("./page/login.jsx"));
+const RegisterPage = lazy(() => import("./page/register.jsx"));
+const DashboardPage = lazy(() => import("./page/dashboard.jsx"));
+const NotFoundPage = lazy(() => import("./page/error.jsx"));
+
 const nameFromEmail = (email = "") =>
-  email
-    .split("@")[0]
-    .split(/[._-]+/)
-    .filter(Boolean)
-    .map((w) => w[0].toUpperCase() + w.slice(1))
-    .join(" ");
+  email.split("@")[0].split(/[._-]+/).filter(Boolean)
+    .map((part) => part[0].toUpperCase() + part.slice(1)).join(" ");
+
+function PageFallback() {
+  return <main className="route-loading"><p>Loading page...</p></main>;
+}
 
 export default function App() {
-  const [page, setPage] = useState("landing"); // "landing" | "login" | "signup" | "dashboard"
+  const [currentUser, setCurrentUser] = useState(null);
   const [userName, setUserName] = useState("");
-  // added: true once Firebase has told us whether someone is already logged in (avoids a landing-page flash on refresh)
   const [authReady, setAuthReady] = useState(false);
 
-  const goTo = (p) => () => setPage(p);
-
-  // added: SESSION. Firebase remembers the login, so on refresh the user goes straight back to the
-  // dashboard, and logging out (or deleting the account) from anywhere sends them to the landing page.
   useEffect(() => {
-    return watchAuth(async (user) => {
+    let mounted = true;
+    const unsubscribe = watchAuth(async (user) => {
+      if (!mounted) return;
+      setCurrentUser(user || null);
       if (!user) {
         setUserName("");
-        setPage((p) => (p === "dashboard" ? "landing" : p));
         setAuthReady(true);
         return;
       }
 
-      setPage("dashboard");
+      // Set a useful fallback immediately; replace it with the saved profile name when available.
+      setUserName(user.displayName || nameFromEmail(user.email) || "Friend");
       setAuthReady(true);
-
-      // the display name comes from users/{uid}/username (saved at sign up / Google sign in)
       try {
         const profile = await getUserProfile(user.uid);
-        if (profile?.username) return setUserName(profile.username);
-      } catch { /* profile not readable yet; use the fallback below */ }
-      // fallback, but never overwrite a name the sign-up form already set
-      setUserName((prev) => prev || user.displayName || nameFromEmail(user.email) || "Friend");
+        if (mounted && profile?.username) setUserName(profile.username);
+      } catch (error) {
+        console.warn("Could not load the user profile:", error);
+      }
     });
+
+    return () => {
+      mounted = false;
+      unsubscribe();
+    };
   }, []);
 
-  const handleLogin = ({ email, name }) => {
-    setUserName(name || nameFromEmail(email) || "Friend");
-    setPage("dashboard");
+  const handleAuthenticated = ({ email, name, fullName }) => {
+    setCurrentUser(auth.currentUser);
+    setUserName(fullName || name || nameFromEmail(email) || "Friend");
   };
 
-  const handleSignUp = ({ fullName, email }) => {
-    setUserName(fullName || nameFromEmail(email) || "Friend");
-    setPage("dashboard");
-  };
+  //changed this into react route
+  return (
+    <Suspense fallback={<PageFallback />}>
+      <Routes>
+        <Route element={<GuestOnly authReady={authReady} user={currentUser} />}>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<LoginPage onLogin={handleAuthenticated} />} />
+          <Route path="/register" element={<RegisterPage onSignUp={handleAuthenticated} />} />
+          <Route path="/signup" element={<Navigate to="/register" replace />} />
+        </Route>
 
-  if (!authReady) return null;
+        <Route element={<RequireAuth authReady={authReady} user={currentUser} />}>
+          <Route
+            path="/dashboard/*"
+            element={<DashboardPage userName={userName || "Friend"} onDeleteAccount={() => setUserName("")} />}
+          />
+        </Route>
 
-  if (page === "login") return <LogIn onLogin={handleLogin} onCreateAccount={goTo("signup")} />;
-  if (page === "signup") return <SignUp onSignUp={handleSignUp} onBackToLogin={goTo("login")} />;
-  if (page === "dashboard") return <Dashboard userName={userName || "Friend"} onDeleteAccount={() => { setUserName(""); setPage("landing"); }} />;
-  return <LandingPage onSignUp={goTo("login")} onStartTracking={goTo("login")} />;
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+    </Suspense>
+  );
 }

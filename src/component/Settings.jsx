@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import "./Watchlist.css";
 import "./Settings.css";
-import { Modal } from "./Watchlist";
-import { changePassword } from "./firebase/firebase";
-import { validateStockThreshold, MESSAGES, MAX_STOCK, DEFAULT_STOCK_THRESHOLD } from "./validation/schemas";
+import { Modal } from "./Watchlist.jsx";
+import { changePassword } from "../lib/firebase.js";
+import { validateStockThreshold, MESSAGES, MAX_STOCK, DEFAULT_STOCK_THRESHOLD } from "../lib/validation/schemas.js";
 
 const FREQUENCIES = [["instant", "Instant"], ["daily", "Daily digest"]];
 const THEMES = [["light", "Light"], ["dark", "Dark"], ["system", "Match device"]];

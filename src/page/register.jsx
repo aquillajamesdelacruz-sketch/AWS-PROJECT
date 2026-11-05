@@ -1,12 +1,13 @@
 import { useState } from "react";
-import "./LogIn.css";
-import "./Signup.css";
-import logo from "./assets/Logo.png";
-import mascot from "./assets/Mascot.png";
+import { Link, useNavigate } from "react-router-dom";
+import "./login.css";
+import "./register.css";
+import logo from "../assets/Logo.png";
+import mascot from "../assets/Mascot.png";
 
-import { register } from "./firebase/firebase.js";
-import { validateSignup, MESSAGES } from "./validation/schemas.js";
-import { signupErrorMessage } from "./validation/authErrors.js";
+import { register } from "../lib/firebase.js";
+import { validateSignup, MESSAGES } from "../lib/validation/schemas.js";
+import { signupErrorMessage } from "../lib/validation/authErrors.js";
 
 function EyeIcon({ off }) {
   return (
@@ -19,7 +20,8 @@ function EyeIcon({ off }) {
 }
 
 //fixed this ahh
-const SignUp = ({ onSignUp, onBackToLogin }) => {
+const SignUp = ({ onSignUp }) => {
+  const navigate = useNavigate();
   const [form, setForm] = useState({ email: "", fullName: "", contact: "", password: "", confirm: "" });
   const [show, setShow] = useState(false);
   const [error, setError] = useState("");
@@ -55,6 +57,7 @@ const SignUp = ({ onSignUp, onBackToLogin }) => {
               fullName: form.fullName.trim(),
               email: credential.user.email || form.email.trim()
             });
+            navigate("/dashboard", { replace: true });
         } catch (error) {
             setError(signupErrorMessage(error))
         } finally {
@@ -116,7 +119,7 @@ const SignUp = ({ onSignUp, onBackToLogin }) => {
 
             <p className="li-new">
               Already have an account?{" "}
-              <a className="li-link" href="#login" onClick={(e) => { e.preventDefault(); onBackToLogin?.(); }}>Sign in</a>
+              <Link className="li-link" to="/login">Sign in</Link>
             </p>
           </form>
         </section>

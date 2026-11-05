@@ -1,20 +1,21 @@
 import { useEffect, useRef, useState } from "react";
-import "./Dashboard.css";
-import "./Theme.css";
-import logo from "./assets/Logo.png";
-import mascot from "./assets/Mascot.png";
-import find from "./assets/find.png";
-import stocks from "./assets/stocks.png";
-import sleep from "./assets/sleep.png";
-import AddItemModal from "./Additemmodal";
-import { validateWatchlistCount, validateNotificationPatch, NOTIFICATION_KEYS, MESSAGES, DEFAULT_STOCK_THRESHOLD } from "./validation/schemas";
-import Watchlist from "./Watchlist";
-import Collection from "./Collection";
-import BoughtSavings from "./Boughtsavings";
-import Settings from "./Settings";
-import { statsFor } from "./Collectionstats";
-import { buildNotifications } from "./Dashboardstats";
-import DashboardHome, { Notifications } from "./Dashboardhome";
+import { useLocation, useNavigate } from "react-router-dom";
+import "./dashboard.css";
+import "../styles/Theme.css";
+import logo from "../assets/Logo.png";
+import mascot from "../assets/Mascot.png";
+import find from "../assets/find.png";
+import stocks from "../assets/stocks.png";
+import sleep from "../assets/sleep.png";
+import AddItemModal from "../component/AddItemModal.jsx";
+import { validateWatchlistCount, validateNotificationPatch, NOTIFICATION_KEYS, MESSAGES, DEFAULT_STOCK_THRESHOLD } from "../lib/validation/schemas.js";
+import Watchlist from "../component/Watchlist.jsx";
+import Collection from "../component/Collection.jsx";
+import BoughtSavings from "../component/BoughtSavings.jsx";
+import Settings from "../component/Settings.jsx";
+import { statsFor } from "../lib/Collectionstats.js";
+import { buildNotifications } from "../lib/Dashboardstats.js";
+import DashboardHome, { Notifications } from "../component/DashboardHome.jsx";
 
 import { onAuthStateChanged } from "firebase/auth";
 import {
@@ -22,7 +23,7 @@ import {
   addCollection, listenCollections, deleteCollections, updateUser,
   listenPurchases, markAsBought,
   listenSettings, saveSettings, deleteAccount, logout
-} from "./firebase/firebase";
+} from "../lib/firebase.js";
 
 const Icon = ({ children }) => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -60,6 +61,17 @@ const getSteps = (firstName) => [
 ];
 
 const THEME_KEY = "peekyfox-theme";
+const DASHBOARD_ROUTES = {
+  Dashboard: "/dashboard",
+  Watchlist: "/dashboard/watchlist",
+  Collection: "/dashboard/collections",
+  "Bought and Savings": "/dashboard/savings",
+  Settings: "/dashboard/settings",
+};
+const routeToView = (pathname) => {
+  const path = pathname.replace(/\/+$/, "") || "/dashboard";
+  return Object.entries(DASHBOARD_ROUTES).find(([, route]) => route === path)?.[0] || "Dashboard";
+};
 const loadTheme = () => {
   try {
     const saved = localStorage.getItem(THEME_KEY);
@@ -70,12 +82,15 @@ const loadTheme = () => {
 };
 
 export default function Dashboard({ userName: initialName = "Bea Shainne", onDeleteAccount }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const active = routeToView(location.pathname);
+  const setActive = (label) => navigate(DASHBOARD_ROUTES[label] || "/dashboard");
   const [userName, setUserName] = useState(initialName);
   const [settings, setSettings] = useState({ email: "", inApp: true, emailAlerts: false, frequency: "instant", stockThreshold: DEFAULT_STOCK_THRESHOLD, theme: loadTheme() });
   const firstName = userName.split(" ")[0];
   const initials = userName.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
   const STEPS = getSteps(firstName);
-  const [active, setActive] = useState("Dashboard");
   const [step, setStep] = useState(0);
   const [open, setOpen] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
@@ -86,7 +101,12 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
   const [items, setItems] = useState([]);
   const [purchases, setPurchases] = useState([]);   // added: bought items from Firebase (feeds the savings charts)
 
-  //added this so that the username changes based on user auth
+  useEffect(() => {
+    const knownPath = Object.values(DASHBOARD_ROUTES).includes(location.pathname.replace(/\/+$/, "") || "/dashboard");
+    if (!knownPath) navigate("/dashboard", { replace: true });
+  }, [location.pathname, navigate]);
+
+  // Keep the displayed user name in sync with the authenticated profile.
   useEffect(() => {
     setUserName(initialName);
   }, [initialName]);
@@ -274,7 +294,7 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
     }
   };
 
-  // added: delete the profile record + the auth account. App.jsx notices the logout and shows the landing page.
+  // Delete the profile record and auth account. The route guard handles the resulting signed-out state.
   // Returns an error message (or "") so the Settings modal can show it.
   const handleDeleteAccount = async () => {
     try {
@@ -289,7 +309,7 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
     }
   };
 
-  // added: log out. The auth listener in App.jsx takes the user back to the landing page.
+  // Log out. The route guard redirects the signed-out user to the login page.
   const handleLogout = () => logout().catch(console.error);
 
   // added: notifications come from the user's real items; the unread count compares them with the saved read time

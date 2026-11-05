@@ -1,4 +1,4 @@
-import { validateProductUrl } from "../validation/schemas.js";
+import { validateProductUrl } from "./validation/schemas.js";
 
 const CUSTOM_API = import.meta.env.VITE_PRODUCT_API_URL;
 const TIMEOUT_MS = 15000;

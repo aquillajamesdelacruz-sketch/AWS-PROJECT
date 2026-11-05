@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import "./Dashboardhome.css";
-import { storeBreakdown, biggestDrop, topWatched, dropPercent, totalSaved, savedPercent, savingsTrend, trendPath, timeAgo } from "./Dashboardstats";
+import "./DashboardHome.css";
+import { storeBreakdown, biggestDrop, topWatched, dropPercent, totalSaved, savedPercent, savingsTrend, trendPath, timeAgo } from "../lib/Dashboardstats.js";
 
 const peso = (n) => "₱" + Number(n).toLocaleString("en-PH", { minimumFractionDigits: 0 });
 

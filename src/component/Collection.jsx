@@ -1,10 +1,10 @@
 import { useMemo, useState } from "react";
 import "./Watchlist.css";
 import "./Collection.css";
-import mascot from "./assets/Mascot.png";
-import sleep from "./assets/sleep.png";
-import { CardView, Modal } from "./Watchlist";
-import { COLORS, statsFor } from "./Collectionstats";
+import mascot from "../assets/Mascot.png";
+import sleep from "../assets/sleep.png";
+import { CardView, Modal } from "./Watchlist.jsx";
+import { COLORS, statsFor } from "../lib/Collectionstats.js";
 
 const peso = (n) => "₱" + Math.round(n).toLocaleString("en-PH");
 

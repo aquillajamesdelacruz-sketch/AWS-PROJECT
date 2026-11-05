@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import "./Additemmodal.css";
-import find from "./assets/find.png";
-import mascot from "./assets/Mascot.png";
+import "./AddItemModal.css";
+import find from "../assets/find.png";
+import mascot from "../assets/Mascot.png";
 
-import { uploadImage, uploadImageFromUrl } from "./firebase/cloudinary";
-import { fetchProductInfo } from "./firebase/productFetch";
+import { uploadImage, uploadImageFromUrl } from "../lib/cloudinary.js";
+import { fetchProductInfo } from "../lib/productFetch.js";
 import {
   validateProductUrl, validateTargetPrice, validateWatchlistCount, validateExpiryDate, validateStockThreshold,
   CATEGORIES, DEFAULT_CATEGORY, DEFAULT_STOCK_THRESHOLD, MAX_EXPIRY_DAYS, MAX_STOCK, addDays, dateToInputValue,
-} from "./validation/schemas";
+} from "../lib/validation/schemas.js";
 
 const STEPS = ["Paste link", "Confirm details", "Track"];
 const STORES = { shopee: "Shopee", lazada: "Lazada", amazon: "Amazon", tiktok: "TikTok Shop" };

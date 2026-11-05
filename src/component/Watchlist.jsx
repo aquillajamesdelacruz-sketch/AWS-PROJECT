@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import "./Watchlist.css";
-import mascot from "./assets/Mascot.png";
-import find from "./assets/find.png";
-import sleep from "./assets/sleep.png";
-import { timeAgo } from "./Dashboardstats";
-import { validateSearchQuery, CATEGORIES, DEFAULT_CATEGORY } from "./validation/schemas";
+import mascot from "../assets/Mascot.png";
+import find from "../assets/find.png";
+import sleep from "../assets/sleep.png";
+import { timeAgo } from "../lib/Dashboardstats.js";
+import { validateSearchQuery, CATEGORIES, DEFAULT_CATEGORY } from "../lib/validation/schemas.js";
 
 /* ---------- helpers ---------- */
 const parse = (v) => Number(String(v).replace(/[^0-9.]/g, "")) || 0;

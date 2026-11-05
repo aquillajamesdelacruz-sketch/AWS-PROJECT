@@ -1,8 +1,8 @@
 import { useState } from "react";
 import "./Watchlist.css";
-import "./Boughtsavings.css";
+import "./BoughtSavings.css";
 
-import { lastMonths, monthKey } from "./Dashboardstats";
+import { lastMonths, monthKey } from "../lib/Dashboardstats.js";
 
 const peso = (n) => "₱" + Math.round(n).toLocaleString("en-PH");
 const sum = (list, key) => list.reduce((t, i) => t + i[key], 0);

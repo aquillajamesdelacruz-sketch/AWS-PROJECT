@@ -1,12 +1,13 @@
 
 import { useState } from "react";
-import "./LogIn.css";
-import logo from "./assets/Logo.png";
-import mascot from "./assets/Mascot.png";
+import { Link, useNavigate } from "react-router-dom";
+import "./login.css";
+import logo from "../assets/Logo.png";
+import mascot from "../assets/Mascot.png";
 
-import { login, googleSignIn, ensureUserRecord } from "./firebase/firebase.js";
-import { validateLogin, MESSAGES } from "./validation/schemas.js";
-import { loginErrorMessage } from "./validation/authErrors.js";
+import { login, googleSignIn, ensureUserRecord } from "../lib/firebase.js";
+import { validateLogin, MESSAGES } from "../lib/validation/schemas.js";
+import { loginErrorMessage } from "../lib/validation/authErrors.js";
 
 function GoogleIcon() {
   return (
@@ -39,7 +40,8 @@ function EyeIcon({ off }) {
   );
 }
 
-const LogIn = ({ onLogin, onCreateAccount }) => {
+const LogIn = ({ onLogin }) => {
+  const navigate = useNavigate();
 
   const [form, setForm] = useState({
     email: "",
@@ -84,6 +86,7 @@ const LogIn = ({ onLogin, onCreateAccount }) => {
         email: credential.user.email || form.email.trim(),
         name: credential.user.displayName || ""
       });
+      navigate("/dashboard", { replace: true });
     } catch (error) {
       setError(loginErrorMessage(error));
     } finally {
@@ -106,6 +109,7 @@ const LogIn = ({ onLogin, onCreateAccount }) => {
         email: credential.user.email || "",
         name: profile?.username || credential.user.displayName || ""
       });
+      navigate("/dashboard", { replace: true });
       
     } catch (error) {
       setError(loginErrorMessage(error));
@@ -254,19 +258,9 @@ const LogIn = ({ onLogin, onCreateAccount }) => {
             {/* Create Account */}
             <p className="li-new">
               New to PeekyFox?{" "}
-              <a
-                className="li-link"
-                href="#signup"
-                onClick={(e) => {
-                  e.preventDefault();
-
-                  if (onCreateAccount) {
-                    onCreateAccount();
-                  }
-                }}
-              >
+              <Link className="li-link" to="/register">
                 Create an account
-              </a>
+              </Link>
             </p>
 
           </form>
