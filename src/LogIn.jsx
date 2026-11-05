@@ -4,7 +4,7 @@ import "./LogIn.css";
 import logo from "./assets/Logo.png";
 import mascot from "./assets/Mascot.png";
 
-import { login, googleSignIn } from "./firebase/firebase.js";
+import { login, googleSignIn, ensureUserRecord } from "./firebase/firebase.js";
 
 function GoogleIcon() {
   return (
@@ -88,10 +88,14 @@ const LogIn = ({ onLogin, onCreateAccount }) => {
     try {
       const credential = await googleSignIn();
 
+      // added: first-time Google users have no profile in the database yet, so create one
+      const profile = await ensureUserRecord(credential.user);
+
       onLogin?.({
         email: credential.user.email || "",
-        name: credential.user.displayName || ""
+        name: profile?.username || credential.user.displayName || ""
       });
+      
     } catch (error) {
       setError("Login failed: " + error.message);
     } finally {

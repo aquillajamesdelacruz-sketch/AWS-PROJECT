@@ -1,7 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./Additemmodal.css";
 import find from "./assets/find.png";
 import mascot from "./assets/Mascot.png";
+
+import { uploadImage, uploadImageFromUrl } from "./firebase/cloudinary";
+import { fetchProductInfo } from "./firebase/productFetch";
 
 const STEPS = ["Paste link", "Confirm details", "Track"];
 const STORES = { shopee: "Shopee", lazada: "Lazada", amazon: "Amazon", tiktok: "TikTok Shop" };
@@ -28,28 +31,120 @@ export default function AddItemModal({ initialUrl = "", collections = [], onClos
   const [url, setUrl] = useState(initialUrl);
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
-  const [original, setOriginal] = useState(0);
+  const [original, setOriginal] = useState("");   // optional: the price before the discount
   const [target, setTarget] = useState("");
   const [collection, setCollection] = useState(collections[0] || "");
   const [toast, setToast] = useState(false);
   const [saveError, setSaveError] = useState("");
+
   const [saving, setSaving] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);   // a picture the user picked from their device
+  const [previewImage, setPreviewImage] = useState("");
+
+  // added: image found by "Fetch"
+  const [fetchedImage, setFetchedImage] = useState("");        // the picture's original web address
+  const [cloudImage, setCloudImage] = useState("");            // the same picture once it is in Cloudinary
+  const [fetchNote, setFetchNote] = useState("");              // message shown under the badge after fetching
+  const [uploadingImage, setUploadingImage] = useState(false); // true while the fetched image goes to Cloudinary
+  const runId = useRef(0);                                     // identifies the latest Fetch so an old one cannot overwrite the form
+  const blobUrl = useRef("");                                  // object URL of a picked file, revoked when replaced
 
   const step = phase === "success" ? 2 : phase === "confirm" ? 1 : 0;
   const store = detectStore(url);
 
-  // Simulated fetch. TODO: replace the timeout with a real request to your scraper/API.
+  // changed: picking a file replaces whatever "Fetch" found. The old preview address is released
+  // so the browser does not keep every picked picture in memory.
+  const clearBlob = () => {
+    if (blobUrl.current) URL.revokeObjectURL(blobUrl.current);
+    blobUrl.current = "";
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    clearBlob();
+    blobUrl.current = URL.createObjectURL(file);
+    setSelectedImage(file);
+    setPreviewImage(blobUrl.current);
+    setSaveError("");
+  };
+
+  // clears the picked file AND the fetched one
+  const removeImage = () => {
+    clearBlob();
+    setSelectedImage(null);
+    setFetchedImage("");
+    setCloudImage("");
+    setPreviewImage("");
+  };
+
+  // when the modal closes: release the picked-file preview and ignore any fetch still running
+  useEffect(() => () => { clearBlob(); runId.current = -1; }, []);
+
+  // changed: REAL fetch (was a timer that left every field empty).
+  //   1. read the link  -> name, price, image address        (productFetch.js)
+  //   2. send the image address to Cloudinary                 (cloudinary.js)
+  //   3. fill the form so the user only has to check it
+  // If anything fails the user still gets the form and can type/pick things by hand.
   useEffect(() => {
     if (phase !== "fetching") return;
-    const t = setTimeout(() => {
-      setName(" ");
-      setPrice(" ");
-      setOriginal(3499);
-      setTarget(" ");
-      setPhase("confirm");
-    }, 1700);
-    return () => clearTimeout(t);
-  }, [phase]);
+
+    // The effect re-runs when the phase changes (fetching -> confirm), so it cannot use its own cleanup
+    // to cancel the image upload that continues after the form appears. A run number is used instead:
+    // it only changes when a NEW fetch starts or the modal closes.
+    const controller = new AbortController();
+    const myRun = ++runId.current;
+    const isCancelled = () => runId.current !== myRun;
+
+    (async () => {
+      const notes = [];
+      let info = { name: "", price: 0, original: 0, image: "" };
+
+      try {
+        info = await fetchProductInfo(url, controller.signal);
+      } catch (error) {
+        if (isCancelled()) return;
+        notes.push(`Pixie could not read that page (${error.message}). Please fill in the details yourself.`);
+      }
+      if (isCancelled()) return;
+
+      // auto-fill the inputs (only what was found; empty values stay empty)
+      setName(info.name || "");
+      setPrice(info.price ? String(info.price) : "");
+      setOriginal(info.original ? String(info.original) : "");
+      setTarget("");
+      removeImage();
+      setPhase("confirm");   // show the form now; the image keeps uploading in the background
+
+      if (info.name && !info.price) notes.push("Pixie found the name but not the price. Please type the current price.");
+
+      if (info.image) {
+        setFetchedImage(info.image);
+        setPreviewImage(info.image);     // shows the picture straight away
+        setUploadingImage(true);
+        try {
+          const uploaded = await uploadImageFromUrl(info.image);   // -> Cloudinary
+          if (isCancelled()) return;
+          setCloudImage(uploaded);
+          setPreviewImage(uploaded);     // from now on the preview is the Cloudinary copy
+        } catch (error) {
+          if (isCancelled()) return;
+          notes.push(`The product image could not be saved to Cloudinary (${error.message}). You can upload one yourself.`);
+          setFetchedImage("");
+          setPreviewImage("");
+        } finally {
+          if (!isCancelled()) setUploadingImage(false);
+        }
+      } else if (info.name) {
+        notes.push("No product image was found. You can upload one yourself.");
+      }
+
+      if (!isCancelled()) setFetchNote(notes.join(" "));
+    })();
+
+    return () => controller.abort();   // only stops the page request; the image upload is guarded by isCancelled()
+  }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && onClose();
@@ -57,37 +152,55 @@ export default function AddItemModal({ initialUrl = "", collections = [], onClos
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  // Save the confirmed product details
-  const save = async () => {
-    setSaveError("");
-    setSaving(true);
+  
+    // changed the save function, and added the image uplood raaa
+    const save = async () => {
+      setSaveError("");
+      setSaving(true);
 
-    try {
-      await onSave?.({
-        image: null,
-        name: name.trim(),
-        url,
-        store,
-        original: Math.max(original, parse(price)),
-        price: parse(price),
-        target: parse(target),
-        collection,
-        alert: true
-      });
+      try {
+        // Which image to save (all of them end up as a Cloudinary address):
+        //   1. a picture the user picked  -> uploaded now
+        //   2. the fetched picture        -> already in Cloudinary (cloudImage)
+        let imageUrl = null;
 
-      setToast(true);
-      setPhase("success");
-    } catch (error) {
-      setSaveError(error.message || "Could not save this item. Please try again.");
-    } finally {
-      setSaving(false);
-    }
-  };
+        if (selectedImage) {
+          imageUrl = await uploadImage(selectedImage);
+        } else if (cloudImage) {
+          imageUrl = cloudImage;
+        }
 
-  const reset = () => {
-    setUrl(""); setName(""); setPrice(""); setTarget("");
-    setToast(false); setPhase("paste");
-  };
+        // Save product information and Cloudinary URL
+        await onSave?.({
+          image: imageUrl,
+          name: name.trim(),
+          url,
+          store,
+          original: Math.max(parse(original), parse(price)),
+          price: parse(price),
+          target: parse(target),
+          collection,
+          alert: true
+        });
+
+        setToast(true);
+        setPhase("success");
+
+      } catch (error) {
+        console.error(error);
+        setSaveError(error.message || "Could not save this item.");
+
+      } finally {
+        setSaving(false);
+      }
+    };
+
+
+    const reset = () => {
+      setUrl(""); setName(""); setPrice(""); setOriginal(""); setTarget("");
+      removeImage(); setFetchNote(""); setSaveError("");     // added: the old picture must not carry over to the next item
+      setToast(false); setPhase("paste");
+    };
 
   return (
     <div className="ai-overlay" role="presentation">
@@ -149,6 +262,29 @@ export default function AddItemModal({ initialUrl = "", collections = [], onClos
         {phase === "confirm" && (
           <>
             {store && <span className="ai-badge">{store} detected</span>}
+
+            {/* added: message about what the fetch could and could not fill in */}
+            {fetchNote && <p className="ai-note" role="status">{fetchNote}</p>}
+
+            {/* Product image: shows the fetched picture (already in Cloudinary) or the one the user picked */}
+            <label className="ai-label" htmlFor="ai-image">Product image</label>
+            <div className="ai-image">
+              {previewImage ? (
+                <div className="ai-image__thumb">
+                  <img src={previewImage} alt="Product preview" />
+                  {uploadingImage && <span className="ai-image__busy">Uploading...</span>}
+                </div>
+              ) : (
+                <div className="ai-image__thumb ai-image__thumb--empty" aria-hidden="true">No image</div>
+              )}
+              <div className="ai-image__side">
+                <input id="ai-image" className="ai-input" type="file" accept="image/*" onChange={handleImageChange} />
+                {previewImage && (
+                  <button type="button" className="ai-image__remove" onClick={removeImage}>Remove image</button>
+                )}
+              </div>
+            </div>
+
             <label className="ai-label" htmlFor="ai-name">Product name</label>
             <input id="ai-name" className="ai-input" value={name} onChange={(e) => setName(e.target.value)} />
 
@@ -157,6 +293,11 @@ export default function AddItemModal({ initialUrl = "", collections = [], onClos
                 <label className="ai-label" htmlFor="ai-price">Current price</label>
                 <input id="ai-price" className="ai-input" inputMode="decimal" value={price ? peso(price) : ""}
                   onChange={(e) => setPrice(e.target.value)} />
+              </div>
+              <div>
+                <label className="ai-label" htmlFor="ai-orig">Original price (optional)</label>
+                <input id="ai-orig" className="ai-input" inputMode="decimal" value={original ? peso(original) : ""}
+                  onChange={(e) => setOriginal(e.target.value)} />
               </div>
               <div>
                 <label className="ai-label" htmlFor="ai-target">Target price</label>
@@ -172,10 +313,13 @@ export default function AddItemModal({ initialUrl = "", collections = [], onClos
               </div>
             </div>
 
+            {/* added: this message was set but never shown, so failed uploads looked like nothing happened */}
+            {saveError && <p className="ai-error" role="alert">{saveError}</p>}
+
             <div className="ai-actions ai-actions--end">
               <button type="button" className="ai-btn ai-btn--ghost" onClick={onClose}>Cancel</button>
-              <button type="button" className="ai-btn ai-btn--primary" onClick={save} disabled={!name.trim() || saving}>
-                {saving ? "Saving..." : "Save and track"}
+              <button type="button" className="ai-btn ai-btn--primary" onClick={save} disabled={!name.trim() || parse(price) <= 0 || saving || uploadingImage}>
+                {saving ? "Saving..." : uploadingImage ? "Uploading image..." : "Save and track"}
               </button>
             </div>
           </>

@@ -54,6 +54,7 @@ body { margin: 0; font-family: "Nunito", system-ui, sans-serif; color: var(--ink
 
 /* ---------- Main ---------- */
 .db-main {
+  min-width: 0;                       /* added: lets the main column shrink on small screens */
   display: flex; flex-direction: column;
   padding: 20px 28px;
   background:
@@ -140,8 +141,13 @@ button:focus-visible { outline: 3px solid var(--navy); outline-offset: 2px; }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 860px) {
-  .db-app { grid-template-columns: 1fr; }
+  .db-app { grid-template-columns: minmax(0, 1fr); }   /* minmax(0) stops wide content from stretching the page */
   .db-side { display: none; }
+  /* added: room for the fixed bottom tab bar so content is never hidden behind it */
+  .db-main { padding: 16px 16px calc(84px + env(safe-area-inset-bottom)); }
+  .db-tabbar { display: flex; }
+  .db-top { flex-wrap: wrap; gap: 10px 12px; }
+  .db-top__fox { width: 44px; }
   .db-top__text h1 { font-size: 20px; }
   .db-modal { padding: 32px 24px 96px; }
   .db-modal__body { flex-direction: column; gap: 8px; text-align: center; }
@@ -169,3 +175,36 @@ button:focus-visible { outline: 3px solid var(--navy); outline-offset: 2px; }
   transition: transform .15s, background .15s;
 }
 .db-add:hover { background: #ea6a0a; transform: translateY(-1px); }
+
+/* ---------- added: bottom tab bar (phones / tablets) ---------- */
+.db-tabbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+  justify-content: space-around; gap: 2px;
+  padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+  background: #fff; border-top: 1px solid #f1e9e1;
+  box-shadow: 0 -6px 20px rgba(15, 23, 42, .06);
+}
+.db-tabbar button {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 6px 2px; border: 0; border-radius: 10px; background: none; cursor: pointer;
+  font: 700 10.5px "Nunito", sans-serif; color: var(--muted);
+}
+.db-tabbar button span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.db-tabbar button.is-active { color: var(--orange); background: #fff3ea; }
+
+@media (min-width: 861px) { .db-tabbar { display: none; } }   /* wide screens use the sidebar instead */
+
+/* sidebar log out button sits above the Pixie tip */
+.db-nav--logout { margin: 18px 0 44px; color: var(--muted); }   /* 44px keeps Pixie's head from touching it */
+
+/* unread count on the bell */
+.db-iconbtn { position: relative; }
+.db-badge {
+  position: absolute; top: -4px; right: -6px; min-width: 16px; height: 16px; padding: 0 4px;
+  border-radius: 8px; background: #ef4444; color: #fff; font: 800 10px/16px "Nunito", sans-serif; text-align: center;
+}
+
+@media (max-width: 480px) {
+  .db-top__text h1 { font-size: 18px; }
+  .db-top__tools { gap: 12px; }
+}

@@ -19,7 +19,7 @@
 .bs-card h2 { font-size: 16px; font-weight: 800; }
 .bs-card > header span { color: #94a3b8; font-size: 11px; }
 
-.bs-chart { display: grid; grid-template-columns: repeat(5, 1fr); gap: 51px; align-items: end; height: 218px; margin-top: 8px; padding: 0 38px; }
+.bs-chart { display: grid; grid-template-columns: repeat(6, 1fr);   /* changed: 6 months now (was 5) */ gap: clamp(8px, 3vw, 51px); align-items: end; height: 218px; margin-top: 8px; padding: 0 clamp(0px, 3vw, 38px); }
 .bs-col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
 .bs-col i { display: block; width: 100%; max-width: 158px; border-radius: 6px 6px 0 0; background: linear-gradient(180deg, #ffa447, #ea580c); }
 .bs-col span { margin-top: 12px; color: #94a3b8; font-size: 11px; }

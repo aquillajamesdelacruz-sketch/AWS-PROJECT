@@ -183,7 +183,7 @@
   .wl-row b, .wl-row__price, .wl-row__status { font-size: 16px; }
   .wl-row small { font-size: 13px; }
   .wl-row .wl-btn { width: 100%; justify-self: stretch; }
-  .wl-detail { grid-template-columns: 1fr; padding: 0; }
+  .wl-detail { grid-template-columns: minmax(0, 1fr); padding: 0; }   /* minmax(0) = the modal can no longer be stretched wider than the screen */
   .wl-detail__img { height: 240px; }
   .wl-detail__info h2 { font-size: 32px; }
   .wl-modal--lg { padding: 28px 20px 24px; }
@@ -196,4 +196,26 @@
   .wl-detail__foot.has-tip { flex-direction: column; align-items: stretch; }
   .wl-tip { margin: 24px 0 0; padding-left: 110px; }
   .wl-tip img { width: 130px; }
+}
+
+/* added: product / edit modals on phones (they were wider than the screen) */
+.wl-modal { max-width: 100%; }
+.wl-detail > *, .wl-hist, .wl-detail__info { min-width: 0; }
+.wl-actions { flex-wrap: wrap; }
+@media (max-width: 600px) {
+  .wl-overlay { padding: 12px; place-items: start center; overflow-y: auto; }
+  .wl-modal, .wl-modal--lg, .wl-modal--md, .wl-modal--sm { padding: 24px 16px 20px; border-radius: 20px; }
+  .wl-modal h2 { font-size: 23px; }
+  .wl-peek { display: none; }                      /* the fox would be cut off above the screen */
+  .wl-tabs { margin: 0 52px 0 0; }
+  .wl-tabs button { margin: 0 4px; font-size: 15px; }
+  .wl-x--abs { top: 10px; right: 10px; height: 44px; }
+  .wl-detail { margin-top: 24px; gap: 20px; }
+  .wl-detail__info h2 { font-size: 26px; }
+  .wl-detail__foot { padding: 0; }
+  .wl-detail__foot .wl-actions .wl-btn, .wl-actions--end .wl-btn { flex: 1 1 100%; }
+  .wl-stats { margin: 16px 0 0; gap: 16px; }
+  .wl-stats strong { font-size: 24px; }
+  .wl-tip { padding-left: 84px; margin-top: 16px; }
+  .wl-tip img { width: 90px; left: -4px; }
 }

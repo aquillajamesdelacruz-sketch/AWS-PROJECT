@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import "./Dashboardhome.css";
-import { storeBreakdown, biggestDrop, topWatched, dropPercent, totalSaved, savedPercent, savingsTrend, trendPath } from "./Dashboardstats";
+import { storeBreakdown, biggestDrop, topWatched, dropPercent, totalSaved, savedPercent, savingsTrend, trendPath, timeAgo } from "./Dashboardstats";
 
 const peso = (n) => "₱" + Number(n).toLocaleString("en-PH", { minimumFractionDigits: 0 });
 
@@ -21,13 +21,9 @@ function CollectionIcon({ type }) {
   );
 }
 
-export function Notifications({ onClose }) {
-  const [items, setItems] = useState([
-    { id: 1, text: "Wireless Earbuds dropped to ₱899!", time: "2 hours ago", color: "#10b981", unread: true },
-    { id: 2, text: "Desk Lamp went up to ₱1,150", time: "1 day ago", color: "#ef4444", unread: true },
-    { id: 3, text: "Fake sale detected on Everyday Backpack", time: "3 days ago", color: "#1e3a8a", unread: true },
-  ]);
-  
+// panel now shows real notifications.
+// saved in Firebase so it survives a refresh.
+export function Notifications({ notifications = [], readAt = 0, enabled = true, onMarkRead, onClose }) {
   const ref = useRef(null);
 
   useEffect(() => {
@@ -37,29 +33,37 @@ export function Notifications({ onClose }) {
     const esc = (e) => e.key === "Escape" && onClose();
     document.addEventListener("mousedown", away);
     document.addEventListener("keydown", esc);
-    return () => { document.removeEventListener("mousedown", away); document.removeEventListener("keydown", esc); };
+    return () => { 
+
+      document.removeEventListener("mousedown", away); 
+      document.removeEventListener("keydown", esc); };
+      
   }, [onClose]);
 
   return (
     <div className="dh-notif" ref={ref} role="dialog" aria-label="Notifications">
       <div className="dh-notif__head">
         <h2>Notifications</h2>
-        <button type="button" onClick={() => setItems(items.map((i) => ({ ...i, unread: false })))}>Mark all as read</button>
+        <button type="button" onClick={onMarkRead} disabled={!notifications.length}>Mark all as read</button>
       </div>
-      <ul>
-        {items.map((i) => (
-          <li key={i.id}>
-            <span className="dh-notif__dot" style={{ background: i.unread ? i.color : "#cbd5e1" }} />
-            <div><p>{i.text}</p><small>{i.time}</small></div>
-          </li>
-        ))}
-      </ul>
+      {!enabled ? (
+        <p className="dh-none dh-notif__empty">In-app alerts are turned off. You can switch them on in Settings.</p>
+      ) : notifications.length === 0 ? (
+        <p className="dh-none dh-notif__empty">Nothing new yet. Pixie will tell you when a price changes.</p>
+      ) : (
+        <ul>
+          {notifications.map((n) => (
+            <li key={n.id}>
+              <span className="dh-notif__dot" style={{ background: n.at > readAt ? n.color : "#cbd5e1" }} />
+              <div><p>{n.text}</p><small>{timeAgo(n.at)}</small></div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
 
-// changed: the page now receives the raw Firebase data (items + purchases) and calculates
-// every number/chart from it, so it updates live when the database changes.
 export default function DashboardHome({ items = [], purchases = [], collections = [], onQuickAdd, onViewItem }) {
   const [url, setUrl] = useState("");
 

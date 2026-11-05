@@ -129,3 +129,42 @@ export function timeAgo(ms, now = Date.now()) {
   }
   return `${value} ${label}${value > 1 ? "s" : ""} ago`;
 }
+
+
+// Notifications are built from the real price history of the user's items (no stored copy).
+// Returns newest first: [{ id, text, at, color }]
+//  - green: the price dropped      - red: the price went up      - navy: the target price was reached
+export function buildNotifications(items, limit = 8) {
+  const peso = (n) => "₱" + Math.round(num(n)).toLocaleString("en-PH");
+  const list = [];
+
+  items.forEach((item) => {
+    const name = String(item.name || "Item").split(",")[0];
+    const h = Array.isArray(item.history) ? item.history : [];
+    const last = h[h.length - 1];
+    const prev = h[h.length - 2];
+
+    // only price UPDATES count: the seed entries are written at the moment the item is added,
+    // so an entry made later than createdAt means the user (or a future price checker) changed the price.
+    if (h.length >= 2 && last && prev && num(last.at) - num(item.createdAt) > 2000) {
+      const dropped = num(last.price) < num(prev.price);
+      list.push({
+        id: `${item.id}-${last.at}`,
+        text: dropped ? `${name} dropped to ${peso(last.price)}!` : `${name} went up to ${peso(last.price)}`,
+        at: num(last.at),
+        color: dropped ? "#10b981" : "#ef4444",
+      });
+    }
+
+    if (num(item.target) > 0 && num(item.price) <= num(item.target)) {
+      list.push({
+        id: `${item.id}-target`,
+        text: `${name} reached your target of ${peso(item.target)}!`,
+        at: num(last?.at) || num(item.createdAt),
+        color: "#1e3a8a",
+      });
+    }
+  });
+
+  return list.sort((a, b) => b.at - a.at).slice(0, limit);
+}

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import "./Watchlist.css";
 import "./Settings.css";
 import { Modal } from "./Watchlist";
+import { changePassword } from "./firebase/firebase";
 
 const FREQUENCIES = [["instant", "Instant"], ["daily", "Daily digest"]];
 const THEMES = [["light", "Light"], ["dark", "Dark"], ["system", "Match device"]];
@@ -30,12 +31,30 @@ function ChangePassword({ onClose, onDone }) {
   const [error, setError] = useState("");
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
-  const submit = (e) => {
+  const [saving, setSaving] = useState(false);   // added: disables the button while Firebase works
+
+  // changed: really updates the Firebase password (re-checks the current password first)
+  const submit = async (e) => {
     e.preventDefault();
+    setError("");
     if (form.next.length < 8) return setError("New password must be at least 8 characters.");
     if (form.next !== form.confirm) return setError("New passwords don't match.");
-    // TODO: send the password change to your API
-    onDone();
+    if (form.next === form.current) return setError("Pick a password that is different from the current one.");
+
+    setSaving(true);
+    try {
+      await changePassword(form.current, form.next);
+      onDone();
+    } catch (err) {
+      const wrong = ["auth/wrong-password", "auth/invalid-credential", "auth/invalid-login-credentials"];
+      setError(
+        wrong.includes(err.code) ? "Your current password is incorrect."
+        : err.code === "auth/too-many-requests" ? "Too many attempts. Please wait a bit and try again."
+        : err.message
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -54,7 +73,7 @@ function ChangePassword({ onClose, onDone }) {
         {error && <p className="st-error" role="alert">{error}</p>}
         <div className="wl-actions wl-rule">
           <button type="button" className="wl-btn wl-btn--ghost" onClick={onClose}>Cancel</button>
-          <button type="submit" className="wl-btn wl-btn--primary">Update password</button>
+          <button type="submit" className="wl-btn wl-btn--primary" disabled={saving}>{saving ? "Updating..." : "Update password"}</button>
         </div>
       </form>
     </Modal>
@@ -62,6 +81,8 @@ function ChangePassword({ onClose, onDone }) {
 }
 
 export default function Settings({ userName, onNameChange, settings, onSettings, items, onDeleteAccount }) {
+  const [deleteError, setDeleteError] = useState("");   // added: shown inside the delete modal
+  const [deleting, setDeleting] = useState(false);
   const [pwOpen, setPwOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [notice, setNotice] = useState("");
@@ -124,9 +145,16 @@ export default function Settings({ userName, onNameChange, settings, onSettings,
         <Modal onClose={() => setDeleteOpen(false)} className="wl-modal--sm">
           <h2>Delete your account?</h2>
           <p className="wl-muted">This removes your items and collections. It can’t be undone.</p>
+          {deleteError && <p className="st-error" role="alert">{deleteError}</p>}
           <div className="wl-actions">
             <button type="button" className="wl-btn wl-btn--ghost" onClick={() => setDeleteOpen(false)}>Cancel</button>
-            <button type="button" className="wl-btn wl-btn--danger" onClick={onDeleteAccount}>Delete</button>
+            <button type="button" className="wl-btn wl-btn--danger" disabled={deleting}
+              onClick={async () => {
+                // changed: onDeleteAccount now returns an error message ("" when it worked)
+                setDeleting(true); setDeleteError("");
+                const message = await onDeleteAccount();
+                if (message) { setDeleteError(message); setDeleting(false); }
+              }}>{deleting ? "Deleting..." : "Delete"}</button>
           </div>
         </Modal>
       )}

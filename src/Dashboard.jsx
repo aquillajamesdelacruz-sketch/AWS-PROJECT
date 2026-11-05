@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./Dashboard.css";
 import "./Theme.css";
 import logo from "./assets/Logo.png";
@@ -12,15 +12,16 @@ import Collection from "./Collection";
 import BoughtSavings from "./Boughtsavings";
 import Settings from "./Settings";
 import { statsFor } from "./Collectionstats";
+import { buildNotifications } from "./Dashboardstats";
 import DashboardHome, { Notifications } from "./Dashboardhome";
 
 import { onAuthStateChanged } from "firebase/auth";
 import {
   auth, addItem, listenItems, updateItem, deleteItem,
-  addCollection, listenCollections, deleteCollections, updateUser, deleteUser,
-  listenPurchases, markAsBought
+  addCollection, listenCollections, deleteCollections, updateUser,
+  listenPurchases, markAsBought,
+  listenSettings, saveSettings, deleteAccount, logout
 } from "./firebase/firebase";
-import { deleteUser as deleteAuthUser } from "firebase/auth";
 
 const Icon = ({ children }) => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -104,19 +105,6 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
   const collectionNames = collections.map((c) => c.name);
   const collectionSummaries = collections.map((c) => ({ ...c, ...statsFor(items.filter((i) => i.collection === c.name)) }));
 
-  const tools = (
-      <div className="db-top__tools">
-        <button type="button" className="db-iconbtn" aria-label="Search">
-          <Icon><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></Icon>
-        </button>
-        <button type="button" className="db-iconbtn" aria-label="Notifications" aria-expanded={notifOpen} onClick={() => setNotifOpen(!notifOpen)}>
-          <Icon><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></Icon>
-        </button>
-        {notifOpen && <Notifications onClose={() => setNotifOpen(false)} />}
-        <span className="db-avatar" aria-label={userName}>{initials}</span>
-      </div>
-  );
-
   const openAdd = (url = "") => { setQuickUrl(url); setAddOpen(true); };
 
   const isLast = step === STEPS.length - 1;
@@ -127,11 +115,13 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
       let unsubscribeItems = () => {};
       let unsubscribeCollections = () => {};   // added: collections listener
       let unsubscribePurchases = () => {};     // added: purchases listener
+      let unsubscribeSettings = () => {};      // added: settings listener
       const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
   
         unsubscribeItems();
         unsubscribeCollections();
         unsubscribePurchases();
+        unsubscribeSettings();
   
         if (user) {
           unsubscribeItems = listenItems(user.uid, (data) => {
@@ -141,6 +131,11 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
           unsubscribeCollections = listenCollections(user.uid, setCollections);
           // added: real-time purchases, so Bought and Savings + Dashboard totals update live
           unsubscribePurchases = listenPurchases(user.uid, setPurchases);
+          // added: settings (email, alerts, frequency, theme, notification read time) are saved per user.
+          // Defaults are kept for anything not saved yet; the email falls back to the login email.
+          unsubscribeSettings = listenSettings(user.uid, (saved) =>
+            setSettings((prev) => ({ ...prev, email: user.email || "", ...saved }))
+          );
         } else {
           setItems([]);
           setCollections([]);
@@ -152,6 +147,7 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
         unsubscribeItems();
         unsubscribeCollections();
         unsubscribePurchases();
+        unsubscribeSettings();
       };
     }, []);
   
@@ -230,31 +226,72 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
     await deleteCollections(user.uid, ids, names);
   };
 
-  // added: save the display name to users/{uid}. Called when the Settings name input changes.
-  // (Not awaited on every keystroke by the UI; failures are only logged.)
+  // added: save the display name to users/{uid}. The screen updates instantly, but the database
+  // write waits 600 ms after the last keystroke so typing a name is not one write per letter.
+  const nameTimer = useRef(null);
   const handleNameChange = (name) => {
     setUserName(name);
+    clearTimeout(nameTimer.current);
+    nameTimer.current = setTimeout(() => {
+      const user = auth.currentUser;
+      if (user && name.trim()) updateUser(user.uid, name.trim()).catch(console.error);
+    }, 600);
+  };
+  useEffect(() => () => clearTimeout(nameTimer.current), []);
+
+  // added: any settings change is applied on screen at once and saved to users/{uid}/settings
+  const handleSettings = (patch) => {
+    setSettings((prev) => ({ ...prev, ...patch }));
     const user = auth.currentUser;
-    if (user) updateUser(user.uid, name, undefined).catch(console.error);
+    if (user) saveSettings(user.uid, patch).catch(console.error);
   };
 
-  // added: delete the profile record + the auth account, then let App return to the landing page
+  // added: delete the profile record + the auth account. App.jsx notices the logout and shows the landing page.
+  // Returns an error message (or "") so the Settings modal can show it.
   const handleDeleteAccount = async () => {
-    const user = auth.currentUser;
     try {
-      if (user) {
-        await deleteUser(user.uid);       // removes users/{uid} (items + collections live inside it)
-        await deleteAuthUser(user);       // removes the login itself
-      }
+      await deleteAccount();
+      onDeleteAccount?.();
+      return "";
     } catch (error) {
-      // Firebase refuses this if the login is old ("requires-recent-login")
-      alert(error.code === "auth/requires-recent-login"
-        ? "Please log in again, then retry deleting your account."
-        : error.message);
-      return;
+      // Firebase refuses this if the login is old
+      return error.code === "auth/requires-recent-login"
+        ? "For your security, please log out, log in again, then retry deleting your account."
+        : error.message;
     }
-    onDeleteAccount?.();
   };
+
+  // added: log out. The auth listener in App.jsx takes the user back to the landing page.
+  const handleLogout = () => logout().catch(console.error);
+
+  // added: notifications come from the user's real items; the unread count compares them with the saved read time
+  const notifications = buildNotifications(items);
+  const unread = settings.inApp ? notifications.filter((n) => n.at > (settings.notifReadAt || 0)).length : 0;
+
+  // (moved below the handlers it uses)
+  const tools = (
+      <div className="db-top__tools">
+        {/* changed: the search button now opens the Watchlist, which has the search box */}
+        <button type="button" className="db-iconbtn" aria-label="Search" onClick={() => setActive("Watchlist")}>
+          <Icon><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></Icon>
+        </button>
+        <button type="button" className="db-iconbtn" aria-label="Notifications" aria-expanded={notifOpen} onClick={() => setNotifOpen(!notifOpen)}>
+          <Icon><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></Icon>
+          {unread > 0 && <span className="db-badge" aria-label={`${unread} unread`}>{unread > 9 ? "9+" : unread}</span>}
+        </button>
+        {notifOpen && (
+          <Notifications
+            notifications={notifications}
+            readAt={settings.notifReadAt || 0}
+            enabled={settings.inApp}
+            onMarkRead={() => handleSettings({ notifReadAt: Date.now() })}
+            onClose={() => setNotifOpen(false)}
+          />
+        )}
+        <span className="db-avatar" aria-label={userName}>{initials}</span>
+      </div>
+  );
+
 
   return (
     <div className="db-app">
@@ -278,6 +315,12 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
         <button type="button" className={`db-nav${active === "Settings" ? " is-active" : ""}`} aria-current={active === "Settings" ? "page" : undefined} onClick={() => setActive("Settings")}>
           <Icon><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></Icon>
           Settings
+        </button>
+
+        {/* added: log out button (Firebase signOut) */}
+        <button type="button" className="db-nav db-nav--logout" onClick={handleLogout}>
+          <Icon><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></Icon>
+          Log out
         </button>
 
         <div className="db-tip">
@@ -309,9 +352,10 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
             userName={userName}
             onNameChange={handleNameChange}
             settings={settings}
-            onSettings={(patch) => setSettings((prev) => ({ ...prev, ...patch }))}
+            onSettings={handleSettings}
             items={items}
             onDeleteAccount={handleDeleteAccount}
+            onLogout={handleLogout}
           />
         ) : active === "Collection" ? (
           <Collection
@@ -352,6 +396,18 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
           </>
         )}
       </main>
+
+      {/* added: on phones/tablets the sidebar is hidden, so this bottom bar is the navigation.
+          Hidden on wide screens by Dashboard.css. */}
+      <nav className="db-tabbar" aria-label="Main">
+        {[...NAV, { label: "Settings", icon: <><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></> }].map((n) => (
+          <button key={n.label} type="button" className={active === n.label ? "is-active" : ""}
+            aria-current={active === n.label ? "page" : undefined} onClick={() => setActive(n.label)}>
+            <Icon>{n.icon}</Icon>
+            <span>{n.label === "Bought and Savings" ? "Savings" : n.label}</span>
+          </button>
+        ))}
+      </nav>
 
       {addOpen && (
         <AddItemModal

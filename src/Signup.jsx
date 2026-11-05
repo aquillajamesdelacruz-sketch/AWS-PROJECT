@@ -4,7 +4,7 @@ import "./Signup.css";
 import logo from "./assets/Logo.png";
 import mascot from "./assets/Mascot.png";
 
-import { register, googleSignIn } from "./firebase/firebase.js";
+import { register } from "./firebase/firebase.js";
 
 function EyeIcon({ off }) {
   return (
@@ -32,7 +32,7 @@ const SignUp = ({ onSignUp, onBackToLogin }) => {
     if (!/^[0-9+\s()-]{7,20}$/.test(form.contact.trim())) return setError("Enter a valid contact number.");
     if (form.password.length < 8) return setError("Password must be at least 8 characters.");
     if (form.password !== form.confirm) return setError("Passwords don't match.");
-    setError(" ");
+    setError("");
     setLoading(true);
     
       //send the info on firebase register function wit trycath
@@ -104,7 +104,8 @@ const SignUp = ({ onSignUp, onBackToLogin }) => {
 
             {error && <p className="li-error su-error" role="alert">{error}</p>}
 
-            <button type="submit" className="li-submit su-submit">Create account</button>
+            {/* added: disabled while Firebase is creating the account, so it cannot be submitted twice */}
+            <button type="submit" className="li-submit su-submit" disabled={loading}>{loading ? "Creating account..." : "Create account"}</button>
 
             <p className="li-new">
               Already have an account?{" "}

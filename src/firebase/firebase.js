@@ -8,6 +8,11 @@ import {
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
+  onAuthStateChanged,
+  updatePassword,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
+  deleteUser as deleteAuthUser,
 } from "firebase/auth";
 
 import {
@@ -266,4 +271,67 @@ export const listenPurchases = (uid, callback) => {
 // DELETE: remove one purchase record
 export const deletePurchase = async (uid, purchaseId) => {
   await remove(ref(db, `users/${uid}/purchases/${purchaseId}`));
+};
+
+
+// ========================================================================================= Session, profile and settings
+
+// SESSION: tells React when someone logs in or out (also fires once on page load,
+// which is how a refresh keeps the user logged in). Returns the unsubscribe function.
+export const watchAuth = (callback) => onAuthStateChanged(auth, callback);
+
+// READ the profile saved by register() -> { username, email, contactNumber, ... } or null
+export const getUserProfile = async (uid) => {
+  const snap = await get(ref(db, "users/" + uid));
+  return snap.exists() ? snap.val() : null;
+};
+
+// Google sign-in never calls register(), so those users have no profile yet.
+// This creates one the first time (and leaves existing profiles untouched).
+export const ensureUserRecord = async (user) => {
+  const profileRef = ref(db, "users/" + user.uid);
+  const snap = await get(profileRef);
+  if (snap.exists() && snap.val().username) return snap.val();
+
+  const profile = {
+    uid: user.uid,
+    username: user.displayName || (user.email || "").split("@")[0] || "Friend",
+    email: user.email || "",
+    contactNumber: "",
+    createdAt: new Date().toISOString()
+  };
+  await update(profileRef, profile);   // update (not set) so items/collections are never wiped
+  return profile;
+};
+
+// SETTINGS (notifications + theme + email) live at users/{uid}/settings
+export const saveSettings = async (uid, patch) => {
+  await update(ref(db, `users/${uid}/settings`), patch);
+};
+
+export const listenSettings = (uid, callback) =>
+  onValue(ref(db, `users/${uid}/settings`), (snapshot) => callback(snapshot.val() || {}));
+
+// CHANGE PASSWORD: Firebase wants the user to prove the old password first (re-authenticate).
+export const changePassword = async (currentPassword, newPassword) => {
+  const user = auth.currentUser;
+  if (!user) throw new Error("Please log in again.");
+  if (!user.providerData.some((p) => p.providerId === "password")) {
+    // accounts created with Google have no password to change
+    const error = new Error("This account signs in with Google, so there is no password to change.");
+    error.code = "app/no-password";
+    throw error;
+  }
+  const credential = EmailAuthProvider.credential(user.email, currentPassword);
+  await reauthenticateWithCredential(user, credential);
+  await updatePassword(user, newPassword);
+};
+
+// DELETE ACCOUNT: database record first (items, collections and purchases live inside it),
+// then the login itself. Throws "auth/requires-recent-login" if the login is too old.
+export const deleteAccount = async () => {
+  const user = auth.currentUser;
+  if (!user) return;
+  await remove(ref(db, "users/" + user.uid));
+  await deleteAuthUser(user);
 };
