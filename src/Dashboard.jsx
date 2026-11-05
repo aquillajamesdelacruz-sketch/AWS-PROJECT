@@ -86,6 +86,11 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
   const [items, setItems] = useState([]);
   const [purchases, setPurchases] = useState([]);   // added: bought items from Firebase (feeds the savings charts)
 
+  //added this so that the username changes based on user auth
+  useEffect(() => {
+    setUserName(initialName);
+  }, [initialName]);
+
   // Light / Dark / Match device. The result is set on <html data-theme="light|dark"> (styles are in Theme.css).
   useEffect(() => {
     const media = window.matchMedia?.("(prefers-color-scheme: dark)");
