@@ -183,3 +183,7 @@ button:focus-visible, a:focus-visible {
   margin: -4px 0 14px; padding: 10px 12px; border-radius: 8px;
   background: #fff1ee; color: #b91c1c; font-size: 12px; font-weight: 700; line-height: 1.4;
 }
+.li-success {
+  margin: -4px 0 14px; padding: 10px 12px; border-radius: 8px;
+  background: #ecfdf3; color: #15803d; font-size: 12px; font-weight: 700; line-height: 1.4;
+}

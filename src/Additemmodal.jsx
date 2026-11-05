@@ -5,6 +5,10 @@ import mascot from "./assets/Mascot.png";
 
 import { uploadImage, uploadImageFromUrl } from "./firebase/cloudinary";
 import { fetchProductInfo } from "./firebase/productFetch";
+import {
+  validateProductUrl, validateTargetPrice, validateWatchlistCount, validateExpiryDate, validateStockThreshold,
+  CATEGORIES, DEFAULT_CATEGORY, DEFAULT_STOCK_THRESHOLD, MAX_EXPIRY_DAYS, MAX_STOCK, addDays, dateToInputValue,
+} from "./validation/schemas";
 
 const STEPS = ["Paste link", "Confirm details", "Track"];
 const STORES = { shopee: "Shopee", lazada: "Lazada", amazon: "Amazon", tiktok: "TikTok Shop" };
@@ -26,7 +30,7 @@ function StepLine() {
   );
 }
 
-export default function AddItemModal({ initialUrl = "", collections = [], onClose, onSave }) {
+export default function AddItemModal({ initialUrl = "", collections = [], watchlistCount = 0, defaultStockThreshold = DEFAULT_STOCK_THRESHOLD, onClose, onSave }) {
   const [phase, setPhase] = useState(initialUrl ? "fetching" : "paste"); // paste | fetching | confirm | success
   const [url, setUrl] = useState(initialUrl);
   const [name, setName] = useState("");
@@ -36,6 +40,15 @@ export default function AddItemModal({ initialUrl = "", collections = [], onClos
   const [collection, setCollection] = useState(collections[0] || "");
   const [toast, setToast] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [urlError, setUrlError] = useState("");
+  const [targetError, setTargetError] = useState("");
+  const [category, setCategory] = useState(DEFAULT_CATEGORY);
+  const [expires, setExpires] = useState("");
+  const [expiresError, setExpiresError] = useState("");
+  const [stock, setStock] = useState(String(defaultStockThreshold ?? DEFAULT_STOCK_THRESHOLD));
+  const [stockError, setStockError] = useState("");
+  const today = new Date();
+  const limitError = validateWatchlistCount(watchlistCount);   // "" while there is still room
 
   const [saving, setSaving] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);   // a picture the user picked from their device
@@ -89,6 +102,14 @@ export default function AddItemModal({ initialUrl = "", collections = [], onClos
   // If anything fails the user still gets the form and can type/pick things by hand.
   useEffect(() => {
     if (phase !== "fetching") return;
+
+    // validate before fetching (also covers a link passed in from the dashboard quick-add)
+    const problem = limitError || validateProductUrl(url);
+    if (problem) {
+      setUrlError(problem);
+      setPhase("paste");
+      return;
+    }
 
     // The effect re-runs when the phase changes (fetching -> confirm), so it cannot use its own cleanup
     // to cancel the image upload that continues after the form appears. A run number is used instead:
@@ -156,6 +177,16 @@ export default function AddItemModal({ initialUrl = "", collections = [], onClos
     // changed the save function, and added the image uplood raaa
     const save = async () => {
       setSaveError("");
+
+      const targetProblem = validateTargetPrice(target);
+      const expiresProblem = validateExpiryDate(expires);
+      const stockProblem = validateStockThreshold(stock);
+      setTargetError(targetProblem);
+      setExpiresError(expiresProblem);
+      setStockError(stockProblem);
+      if (targetProblem || expiresProblem || stockProblem) return;
+      if (limitError) return setSaveError(limitError);
+
       setSaving(true);
 
       try {
@@ -180,6 +211,9 @@ export default function AddItemModal({ initialUrl = "", collections = [], onClos
           price: parse(price),
           target: parse(target),
           collection,
+          category,
+          expiresAt: expires,
+          stockThreshold: Number(stock),
           alert: true
         });
 
@@ -196,8 +230,17 @@ export default function AddItemModal({ initialUrl = "", collections = [], onClos
     };
 
 
+    const handleFetch = () => {
+      const problem = limitError || validateProductUrl(url);
+      setUrlError(problem);
+      if (!problem) setPhase("fetching");
+    };
+
     const reset = () => {
       setUrl(""); setName(""); setPrice(""); setOriginal(""); setTarget("");
+      setUrlError(""); setTargetError("");
+      setCategory(DEFAULT_CATEGORY); setExpires(""); setExpiresError("");
+      setStock(String(defaultStockThreshold ?? DEFAULT_STOCK_THRESHOLD)); setStockError("");
       removeImage(); setFetchNote(""); setSaveError("");     // added: the old picture must not carry over to the next item
       setToast(false); setPhase("paste");
     };
@@ -227,12 +270,14 @@ export default function AddItemModal({ initialUrl = "", collections = [], onClos
             <label className="ai-label" htmlFor="ai-url">Product link</label>
             <div className="ai-linkrow">
               <input id="ai-url" className="ai-input" type="url" placeholder="https://shopee.ph/product/example"
-                value={url} onChange={(e) => setUrl(e.target.value)} disabled={phase === "fetching"} />
+                value={url} onChange={(e) => { setUrl(e.target.value); setUrlError(""); }} disabled={phase === "fetching"}
+                aria-invalid={!!urlError} aria-describedby={urlError ? "ai-url-error" : undefined} />
               <button type="button" className={`ai-fetch${phase === "fetching" ? " is-busy" : ""}`}
-                disabled={!url.trim() || phase === "fetching"} onClick={() => setPhase("fetching")}>
+                disabled={phase === "fetching" || !!limitError} onClick={handleFetch}>
                 {phase === "fetching" && <span className="ai-dot" />}Fetch
               </button>
             </div>
+            {(urlError || limitError) && <p id="ai-url-error" className="ai-error ai-error--field" role="alert">{limitError || urlError}</p>}
           </>
         )}
 
@@ -301,8 +346,11 @@ export default function AddItemModal({ initialUrl = "", collections = [], onClos
               </div>
               <div>
                 <label className="ai-label" htmlFor="ai-target">Target price</label>
-                <input id="ai-target" className="ai-input" inputMode="decimal" value={target ? peso(target) : ""}
-                  onChange={(e) => setTarget(e.target.value)} />
+                <input id="ai-target" className="ai-input" inputMode="decimal" placeholder="e.g. 999" value={target}
+                  onChange={(e) => { setTarget(e.target.value); if (targetError) setTargetError(validateTargetPrice(e.target.value)); }}
+                  onBlur={() => setTargetError(validateTargetPrice(target))}
+                  aria-invalid={!!targetError} aria-describedby={targetError ? "ai-target-error" : undefined} />
+                {targetError && <p id="ai-target-error" className="ai-error ai-error--field" role="alert">{targetError}</p>}
               </div>
               <div>
                 <label className="ai-label" htmlFor="ai-coll">Collection</label>
@@ -310,6 +358,29 @@ export default function AddItemModal({ initialUrl = "", collections = [], onClos
                   <option value="">No collection</option>
                   {collections.map((c) => <option key={c}>{c}</option>)}
                 </select>
+              </div>
+              <div>
+                <label className="ai-label" htmlFor="ai-cat">Category</label>
+                <select id="ai-cat" className="ai-input ai-select" value={category} onChange={(e) => setCategory(e.target.value)}>
+                  {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="ai-label" htmlFor="ai-exp">Alert expires on</label>
+                <input id="ai-exp" className="ai-input" type="date" value={expires}
+                  min={dateToInputValue(addDays(today, 1))} max={dateToInputValue(addDays(today, MAX_EXPIRY_DAYS))}
+                  onChange={(e) => { setExpires(e.target.value); if (expiresError) setExpiresError(validateExpiryDate(e.target.value)); }}
+                  onBlur={() => setExpiresError(validateExpiryDate(expires))}
+                  aria-invalid={!!expiresError} aria-describedby={expiresError ? "ai-exp-error" : undefined} />
+                {expiresError && <p id="ai-exp-error" className="ai-error ai-error--field" role="alert">{expiresError}</p>}
+              </div>
+              <div>
+                <label className="ai-label" htmlFor="ai-stock">Stock alert threshold (1-{MAX_STOCK})</label>
+                <input id="ai-stock" className="ai-input" inputMode="numeric" value={stock}
+                  onChange={(e) => { setStock(e.target.value); if (stockError) setStockError(validateStockThreshold(e.target.value)); }}
+                  onBlur={() => setStockError(validateStockThreshold(stock))}
+                  aria-invalid={!!stockError} aria-describedby={stockError ? "ai-stock-error" : undefined} />
+                {stockError && <p id="ai-stock-error" className="ai-error ai-error--field" role="alert">{stockError}</p>}
               </div>
             </div>
 

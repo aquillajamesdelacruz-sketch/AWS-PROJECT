@@ -219,3 +219,8 @@
   .wl-tip { padding-left: 84px; margin-top: 16px; }
   .wl-tip img { width: 90px; left: -4px; }
 }
+
+.wl-cat { appearance: auto; min-width: 160px; font: inherit; }
+.wl-search-error { margin: 8px 0 0; color: #b91c1c; font-size: 13px; font-weight: 700; }
+.wl-meta { margin-top: 10px; font-size: 13px; }
+.wl-search input[aria-invalid="true"] { color: #b91c1c; }

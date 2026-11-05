@@ -40,3 +40,6 @@
   .st-btn--wide, .st-btn--red { min-width: 0; }
   .st-chips button { padding: 0 16px; }
 }
+
+.st-notice--error { background: #b91c1c; }
+.st-input--sm { width: 120px; height: 44px; }

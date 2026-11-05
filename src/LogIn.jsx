@@ -5,6 +5,8 @@ import logo from "./assets/Logo.png";
 import mascot from "./assets/Mascot.png";
 
 import { login, googleSignIn, ensureUserRecord } from "./firebase/firebase.js";
+import { validateLogin, MESSAGES } from "./validation/schemas.js";
+import { loginErrorMessage } from "./validation/authErrors.js";
 
 function GoogleIcon() {
   return (
@@ -47,6 +49,7 @@ const LogIn = ({ onLogin, onCreateAccount }) => {
   const [loading, setLoading] = useState(false);
   const [show, setShow] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
 
   // Handle input changes
@@ -64,17 +67,25 @@ const LogIn = ({ onLogin, onCreateAccount }) => {
     e.preventDefault();
 
     setError("");
+    setSuccess("");
+
+    const problem = validateLogin(form);
+    if (problem) return setError(problem);
+
     setLoading(true);
 
     try {
       const credential = await login(form.email.trim(), form.password);
+
+      setSuccess(MESSAGES.auth.loginSuccess);
+      await new Promise((resolve) => setTimeout(resolve, 900));   // let the message be seen
 
       onLogin?.({
         email: credential.user.email || form.email.trim(),
         name: credential.user.displayName || ""
       });
     } catch (error) {
-      setError("Login failed: " + error.message);
+      setError(loginErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -97,7 +108,7 @@ const LogIn = ({ onLogin, onCreateAccount }) => {
       });
       
     } catch (error) {
-      setError("Login failed: " + error.message);
+      setError(loginErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -150,7 +161,7 @@ const LogIn = ({ onLogin, onCreateAccount }) => {
             Sign in to keep an eye on your favorites.
           </p>
 
-          <form className="li-form" onSubmit={handleSubmit}>
+          <form className="li-form" onSubmit={handleSubmit} noValidate>
 
             {/* Email */}
             <label className="li-label" htmlFor="li-email">
@@ -166,7 +177,6 @@ const LogIn = ({ onLogin, onCreateAccount }) => {
               autoComplete="email"
               value={form.email}
               onChange={handleChange}
-              required
             />
 
             {/* Password */}
@@ -183,7 +193,6 @@ const LogIn = ({ onLogin, onCreateAccount }) => {
               autoComplete="current-password"
               value={form.password}
               onChange={handleChange}
-              required
             />
 
             {/* Show Password and Forgot Password */}
@@ -224,6 +233,12 @@ const LogIn = ({ onLogin, onCreateAccount }) => {
             {error && (
               <p className="li-error" role="alert">
                 {error}
+              </p>
+            )}
+
+            {success && (
+              <p className="li-success" role="status">
+                {success}
               </p>
             )}
 

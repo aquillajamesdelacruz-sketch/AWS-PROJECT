@@ -7,6 +7,7 @@ import find from "./assets/find.png";
 import stocks from "./assets/stocks.png";
 import sleep from "./assets/sleep.png";
 import AddItemModal from "./Additemmodal";
+import { validateWatchlistCount, validateNotificationPatch, NOTIFICATION_KEYS, MESSAGES, DEFAULT_STOCK_THRESHOLD } from "./validation/schemas";
 import Watchlist from "./Watchlist";
 import Collection from "./Collection";
 import BoughtSavings from "./Boughtsavings";
@@ -70,7 +71,7 @@ const loadTheme = () => {
 
 export default function Dashboard({ userName: initialName = "Bea Shainne", onDeleteAccount }) {
   const [userName, setUserName] = useState(initialName);
-  const [settings, setSettings] = useState({ email: "", inApp: true, emailAlerts: false, frequency: "instant", theme: loadTheme() });
+  const [settings, setSettings] = useState({ email: "", inApp: true, emailAlerts: false, frequency: "instant", stockThreshold: DEFAULT_STOCK_THRESHOLD, theme: loadTheme() });
   const firstName = userName.split(" ")[0];
   const initials = userName.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
   const STEPS = getSteps(firstName);
@@ -159,6 +160,10 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
         alert("Please log in first.");
         return;
       }
+
+      // watchlist limit: item 51 is rejected (the modal shows this message)
+      const limitError = validateWatchlistCount(items.length);
+      if (limitError) throw new Error(limitError);
   
       // added: seed the price history so the charts have a starting point.
       // Two entries (original -> current) record the discount already present when added.
@@ -240,10 +245,28 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
   useEffect(() => () => clearTimeout(nameTimer.current), []);
 
   // added: any settings change is applied on screen at once and saved to users/{uid}/settings
-  const handleSettings = (patch) => {
+  // Notification preferences are validated first: null / undefined / wrong types are rejected and nothing is changed.
+  // Returns "" when saved, otherwise the error message (Settings.jsx shows it).
+  const handleSettings = async (patch) => {
+    const touchesNotifications = NOTIFICATION_KEYS.some((k) => patch && Object.prototype.hasOwnProperty.call(patch, k));
+    if (touchesNotifications) {
+      const problem = validateNotificationPatch(patch);
+      if (problem) return problem;
+    }
+
+    const before = Object.fromEntries(Object.keys(patch).map((k) => [k, settings[k]]));
     setSettings((prev) => ({ ...prev, ...patch }));
+
     const user = auth.currentUser;
-    if (user) saveSettings(user.uid, patch).catch(console.error);
+    if (!user) return "";
+    try {
+      await saveSettings(user.uid, patch);
+      return "";
+    } catch (error) {
+      console.error(error);
+      setSettings((prev) => ({ ...prev, ...before }));   // put the old values back
+      return touchesNotifications ? MESSAGES.notifications.failed : error.message;
+    }
   };
 
   // added: delete the profile record + the auth account. App.jsx notices the logout and shows the landing page.
@@ -414,6 +437,8 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
           key={quickUrl || "new"}
           initialUrl={quickUrl}
           collections={collectionNames}
+          watchlistCount={items.length}
+          defaultStockThreshold={settings.stockThreshold}
           onClose={() => setAddOpen(false)}
           
           // operational add item fixed(reeal)

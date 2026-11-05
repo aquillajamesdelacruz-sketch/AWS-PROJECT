@@ -5,6 +5,8 @@ import logo from "./assets/Logo.png";
 import mascot from "./assets/Mascot.png";
 
 import { register } from "./firebase/firebase.js";
+import { validateSignup, MESSAGES } from "./validation/schemas.js";
+import { signupErrorMessage } from "./validation/authErrors.js";
 
 function EyeIcon({ off }) {
   return (
@@ -21,6 +23,7 @@ const SignUp = ({ onSignUp, onBackToLogin }) => {
   const [form, setForm] = useState({ email: "", fullName: "", contact: "", password: "", confirm: "" });
   const [show, setShow] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   //added this loading errrr
   const [loading, setLoading] = useState(false);
@@ -29,9 +32,9 @@ const SignUp = ({ onSignUp, onBackToLogin }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!/^[0-9+\s()-]{7,20}$/.test(form.contact.trim())) return setError("Enter a valid contact number.");
-    if (form.password.length < 8) return setError("Password must be at least 8 characters.");
-    if (form.password !== form.confirm) return setError("Passwords don't match.");
+    setSuccess("");
+    const problem = validateSignup(form);
+    if (problem) return setError(problem);
     setError("");
     setLoading(true);
     
@@ -39,10 +42,13 @@ const SignUp = ({ onSignUp, onBackToLogin }) => {
       try {
             const credential = await register(
               form.email.trim(),
-              form.password.trim(),
+              form.password,
               form.fullName.trim(),
               form.contact.trim()
             );
+
+            setSuccess(MESSAGES.auth.signupSuccess);
+            await new Promise((resolve) => setTimeout(resolve, 900));   // let the message be seen
 
             // Notify App.jsx so it can open the dashboard after registration.
             onSignUp?.({
@@ -50,7 +56,7 @@ const SignUp = ({ onSignUp, onBackToLogin }) => {
               email: credential.user.email || form.email.trim()
             });
         } catch (error) {
-            setError(error.message)
+            setError(signupErrorMessage(error))
         } finally {
             setLoading(false)
         }
@@ -80,21 +86,21 @@ const SignUp = ({ onSignUp, onBackToLogin }) => {
           <h2 id="su-title" className="li-card__title">Create your account</h2>
           <p className="li-card__sub">It only takes a minute.</p>
 
-          <form className="li-form" onSubmit={handleSubmit} noValidate={false}>
+          <form className="li-form" onSubmit={handleSubmit} noValidate>
             <label className="li-label" htmlFor="su-email">Email</label>
-            <input id="su-email" className="li-input" type="email" autoComplete="email" value={form.email} onChange={set("email")} required />
+            <input id="su-email" className="li-input" type="email" autoComplete="email" value={form.email} onChange={set("email")} />
 
             <label className="li-label" htmlFor="su-name">Full name</label>
-            <input id="su-name" className="li-input" type="text" autoComplete="name" value={form.fullName} onChange={set("fullName")} required />
+            <input id="su-name" className="li-input" type="text" autoComplete="name" value={form.fullName} onChange={set("fullName")} />
 
             <label className="li-label" htmlFor="su-contact">Contact number</label>
-            <input id="su-contact" className="li-input" type="tel" autoComplete="tel" inputMode="tel" value={form.contact} onChange={set("contact")} required />
+            <input id="su-contact" className="li-input" type="tel" autoComplete="tel" inputMode="tel" value={form.contact} onChange={set("contact")} />
 
             <label className="li-label" htmlFor="su-password">Password</label>
-            <input id="su-password" className="li-input" type={show ? "text" : "password"} autoComplete="new-password" minLength={8} value={form.password} onChange={set("password")} required />
+            <input id="su-password" className="li-input" type={show ? "text" : "password"} autoComplete="new-password" value={form.password} onChange={set("password")} />
 
             <label className="li-label" htmlFor="su-confirm">Confirm password</label>
-            <input id="su-confirm" className="li-input" type={show ? "text" : "password"} autoComplete="new-password" value={form.confirm} onChange={set("confirm")} required />
+            <input id="su-confirm" className="li-input" type={show ? "text" : "password"} autoComplete="new-password" value={form.confirm} onChange={set("confirm")} />
 
             <div className="li-row">
               <button type="button" className="li-show" onClick={() => setShow(!show)} aria-pressed={show}>
@@ -103,6 +109,7 @@ const SignUp = ({ onSignUp, onBackToLogin }) => {
             </div>
 
             {error && <p className="li-error su-error" role="alert">{error}</p>}
+            {success && <p className="li-success su-error" role="status">{success}</p>}
 
             {/* added: disabled while Firebase is creating the account, so it cannot be submitted twice */}
             <button type="submit" className="li-submit su-submit" disabled={loading}>{loading ? "Creating account..." : "Create account"}</button>

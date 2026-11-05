@@ -4,6 +4,7 @@ import mascot from "./assets/Mascot.png";
 import find from "./assets/find.png";
 import sleep from "./assets/sleep.png";
 import { timeAgo } from "./Dashboardstats";
+import { validateSearchQuery, CATEGORIES, DEFAULT_CATEGORY } from "./validation/schemas";
 
 /* ---------- helpers ---------- */
 const parse = (v) => Number(String(v).replace(/[^0-9.]/g, "")) || 0;
@@ -91,6 +92,7 @@ function UpdateItem({ item, collections, onClose, onSave }) {
   const [price, setPrice] = useState(String(item.price));
   const [target, setTarget] = useState(String(item.target));
   const [collection, setCollection] = useState(item.collection || "");
+  const [category, setCategory] = useState(item.category || DEFAULT_CATEGORY);
   return (
     <Modal onClose={onClose} className="wl-modal--md">
       <header className="wl-modal__head">
@@ -107,11 +109,14 @@ function UpdateItem({ item, collections, onClose, onSave }) {
         <div><label className="wl-label" htmlFor="u-coll">Collection</label>
           <select id="u-coll" className="wl-input wl-select" value={collection} onChange={(e) => setCollection(e.target.value)}>
             <option value="">No collection</option>{collections.map((c) => <option key={c}>{c}</option>)}</select></div>
+        <div><label className="wl-label" htmlFor="u-cat">Category</label>
+          <select id="u-cat" className="wl-input wl-select" value={category} onChange={(e) => setCategory(e.target.value)}>
+            {CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select></div>
       </div>
       <div className="wl-actions wl-actions--end wl-rule">
         <button type="button" className="wl-btn wl-btn--ghost" onClick={onClose}>Cancel</button>
         <button type="button" className="wl-btn wl-btn--primary" disabled={!name.trim()}
-          onClick={() => onSave({ ...item, name: name.trim(), price: parse(price), target: parse(target), collection })}>Save Update</button>
+          onClick={() => onSave({ ...item, name: name.trim(), price: parse(price), target: parse(target), collection, category })}>Save Update</button>
       </div>
     </Modal>
   );
@@ -170,6 +175,11 @@ function ProductModal({ item, onClose, onEdit, onDelete, onUpdate, onBought }) {
                 onClick={() => onUpdate({ ...item, alert: !item.alert })}><i /></button>
               <span>{item.alert ? "On" : "Off"}</span>
             </div>
+            <p className="wl-muted wl-meta">
+              Category: {item.category || DEFAULT_CATEGORY}
+              {item.expiresAt && <> · Alert expires: {new Date(`${item.expiresAt}T00:00:00`).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })}</>}
+              {item.stockThreshold && <> · Stock alert at {item.stockThreshold}</>}
+            </p>
           </div>
         </div>
       ) : (
@@ -265,6 +275,8 @@ function ListView({ items, edit, selected, toggle, open, sort, setSort }) {
 export default function Watchlist({ items, collections = [], openId, onOpened, onAdd, onUpdate, onDelete, onBought }) {
   const [view, setView] = useState("card");
   const [query, setQuery] = useState("");
+  const [searchError, setSearchError] = useState("");
+  const [category, setCategory] = useState("All");
   const [edit, setEdit] = useState(false);
   const [selected, setSelected] = useState([]);
   const [sort, setSort] = useState({ key: null, dir: 1 });
@@ -278,10 +290,13 @@ export default function Watchlist({ items, collections = [], openId, onOpened, o
   }, [openId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const shown = useMemo(() => {
-    let list = items.filter((i) => i.name.toLowerCase().includes(query.trim().toLowerCase()));
+    // an invalid search (special characters only, over 255 characters) is not applied
+    const q = searchError ? "" : query.trim().toLowerCase();
+    let list = items.filter((i) => i.name.toLowerCase().includes(q)
+      && (category === "All" || (i.category || DEFAULT_CATEGORY) === category));
     if (sort.key) list = [...list].sort((a, b) => (sort.key === "name" ? a.name.localeCompare(b.name) : a.price - b.price) * sort.dir);
     return list;
-  }, [items, query, sort]);
+  }, [items, query, searchError, category, sort]);
 
   const detail = items.find((i) => i.id === detailId);
   const editing = items.find((i) => i.id === editingId);
@@ -298,7 +313,14 @@ export default function Watchlist({ items, collections = [], openId, onOpened, o
     <div className="wl">
       <header className="wl-top">
         <h1>Watchlist</h1>
-        <label className="wl-search"><SearchI /><input type="search" placeholder="Search your watchlist" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search your watchlist" /></label>
+        <label className="wl-search"><SearchI /><input type="search" placeholder="Search your watchlist" value={query} aria-label="Search your watchlist"
+          aria-invalid={!!searchError}
+          onChange={(e) => { const v = e.target.value; setQuery(v); setSearchError(v.trim() ? validateSearchQuery(v) : ""); }}
+          onKeyDown={(e) => { if (e.key === "Enter") setSearchError(validateSearchQuery(query)); }} /></label>
+        <select className="wl-tool wl-cat" aria-label="Filter by category" value={category} onChange={(e) => setCategory(e.target.value)}>
+          <option value="All">All categories</option>
+          {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
         <button type="button" className="wl-tool" onClick={onAdd}><PlusI />Add item</button>
         <button type="button" className={`wl-tool${edit ? " is-on" : ""}`} onClick={toggleEdit} aria-pressed={edit} disabled={!items.length}><PencilI />Edit watchlist</button>
         <div className="wl-toggle" role="group" aria-label="View">
@@ -306,6 +328,8 @@ export default function Watchlist({ items, collections = [], openId, onOpened, o
           <button type="button" aria-label="List view" aria-pressed={view === "list"} className={view === "list" ? "is-on" : ""} onClick={() => setView("list")}><ListI /></button>
         </div>
       </header>
+
+      {searchError && <p className="wl-search-error" role="alert">{searchError}</p>}
 
       {edit && (
         <div className="wl-editbar">
@@ -325,7 +349,7 @@ export default function Watchlist({ items, collections = [], openId, onOpened, o
           <button type="button" className="wl-btn wl-btn--primary" onClick={onAdd}>+ Add your first item</button>
         </section>
       ) : !shown.length ? (
-        <section className="wl-empty wl-empty--sm"><h2>No matches.</h2><p>Nothing in your watchlist matches “{query}”.</p></section>
+        <section className="wl-empty wl-empty--sm"><h2>No matches.</h2><p>{searchError || query.trim() ? "Nothing in your watchlist matches your search" : "Nothing in this category yet"}{category !== "All" ? ` in ${category}` : ""}.</p></section>
       ) : view === "card" ? (
         <CardView items={shown} edit={edit} selected={selected} toggle={toggle} open={setDetailId} />
       ) : (

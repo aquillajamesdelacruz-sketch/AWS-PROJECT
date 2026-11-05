@@ -1,3 +1,5 @@
+import { validateProductUrl } from "../validation/schemas.js";
+
 const CUSTOM_API = import.meta.env.VITE_PRODUCT_API_URL;
 const TIMEOUT_MS = 15000;
 
@@ -38,6 +40,10 @@ const getJson = async (endpoint, signal) => {
 };
 
 export async function fetchProductInfo(url, signal) {
+  // never fetch an invalid / unsupported link
+  const problem = validateProductUrl(url);
+  if (problem) throw new Error(problem);
+
   const link = url.trim();
 
   if (CUSTOM_API) {

@@ -3,6 +3,7 @@ import "./Watchlist.css";
 import "./Settings.css";
 import { Modal } from "./Watchlist";
 import { changePassword } from "./firebase/firebase";
+import { validateStockThreshold, MESSAGES, MAX_STOCK, DEFAULT_STOCK_THRESHOLD } from "./validation/schemas";
 
 const FREQUENCIES = [["instant", "Instant"], ["daily", "Daily digest"]];
 const THEMES = [["light", "Light"], ["dark", "Dark"], ["system", "Match device"]];
@@ -86,6 +87,26 @@ export default function Settings({ userName, onNameChange, settings, onSettings,
   const [pwOpen, setPwOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [notice, setNotice] = useState("");
+  const [noticeError, setNoticeError] = useState(false);
+  const flash = (message, isError = false) => { setNoticeError(isError); setNotice(message); };
+
+  // stock threshold: validated while typing, saved when the field loses focus
+  const [stockText, setStockText] = useState(String(settings.stockThreshold ?? DEFAULT_STOCK_THRESHOLD));
+  const [stockError, setStockError] = useState("");
+  useEffect(() => { setStockText(String(settings.stockThreshold ?? DEFAULT_STOCK_THRESHOLD)); }, [settings.stockThreshold]);
+  const saveStock = async () => {
+    const problem = validateStockThreshold(stockText);
+    setStockError(problem);
+    if (problem || Number(stockText) === settings.stockThreshold) return;
+    const failure = await onSettings({ stockThreshold: Number(stockText) });
+    failure ? flash(failure, true) : flash(MESSAGES.stock.saved);
+  };
+
+  // notification switches / chips: Dashboard validates (null / undefined are rejected) and saves
+  const saveNotification = async (patch) => {
+    const failure = await onSettings(patch);
+    failure ? flash(failure, true) : flash(MESSAGES.notifications.saved);
+  };
 
   useEffect(() => {
     if (!notice) return;
@@ -94,7 +115,7 @@ export default function Settings({ userName, onNameChange, settings, onSettings,
   }, [notice]);
 
   const exportCsv = () => {
-    if (!items.length) return setNotice("Nothing to export yet. Add an item first.");
+    if (!items.length) return flash("Nothing to export yet. Add an item first.", true);
     const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
     const head = ["Name", "Store", "URL", "Current price", "Original price", "Target price", "Collection"];
     const rows = items.map((i) => [i.name, i.store, i.url, i.price, i.original, i.target, i.collection].map(esc).join(","));
@@ -104,13 +125,13 @@ export default function Settings({ userName, onNameChange, settings, onSettings,
     a.download = "peekyfox-items.csv";
     a.click();
     URL.revokeObjectURL(a.href);
-    setNotice(`Exported ${items.length} ${items.length === 1 ? "item" : "items"}.`);
+    flash(`Exported ${items.length} ${items.length === 1 ? "item" : "items"}.`);
   };
 
   return (
     <div className="wl st">
       <h1 className="st-title">Settings</h1>
-      {notice && <p className="st-notice" role="status">{notice}</p>}
+      {notice && <p className={`st-notice${noticeError ? " st-notice--error" : ""}`} role={noticeError ? "alert" : "status"}>{notice}</p>}
 
       <section className="st-card">
         <header className="st-head"><h2>Profile</h2><button type="button" className="st-btn" onClick={() => setPwOpen(true)}>Change password</button></header>
@@ -122,9 +143,18 @@ export default function Settings({ userName, onNameChange, settings, onSettings,
 
       <section className="st-card">
         <h2>Notifications</h2>
-        <div className="st-line"><span>In-app alerts</span><Switch label="In-app alerts" checked={settings.inApp} onChange={(v) => onSettings({ inApp: v })} /></div>
-        <div className="st-line"><span>Email alerts</span><Switch label="Email alerts" checked={settings.emailAlerts} onChange={(v) => onSettings({ emailAlerts: v })} /></div>
-        <div className="st-line"><span>How often?</span><Chips label="How often" options={FREQUENCIES} value={settings.frequency} onChange={(v) => onSettings({ frequency: v })} /></div>
+        <div className="st-line"><span>In-app alerts</span><Switch label="In-app alerts" checked={settings.inApp} onChange={(v) => saveNotification({ inApp: v })} /></div>
+        <div className="st-line"><span>Email alerts</span><Switch label="Email alerts" checked={settings.emailAlerts} onChange={(v) => saveNotification({ emailAlerts: v })} /></div>
+        <div className="st-line"><span>Low-stock alert threshold (1-{MAX_STOCK})</span>
+          <div>
+            <input id="st-stock" className="st-input st-input--sm" inputMode="numeric" aria-label="Low-stock alert threshold" value={stockText}
+              onChange={(e) => { setStockText(e.target.value); setStockError(validateStockThreshold(e.target.value)); }}
+              onBlur={saveStock} onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+              aria-invalid={!!stockError} aria-describedby={stockError ? "st-stock-error" : undefined} />
+            {stockError && <p id="st-stock-error" className="st-error" role="alert">{stockError}</p>}
+          </div>
+        </div>
+        <div className="st-line"><span>How often?</span><Chips label="How often" options={FREQUENCIES} value={settings.frequency} onChange={(v) => saveNotification({ frequency: v })} /></div>
       </section>
 
       <section className="st-card">
@@ -140,7 +170,7 @@ export default function Settings({ userName, onNameChange, settings, onSettings,
         </div>
       </section>
 
-      {pwOpen && <ChangePassword onClose={() => setPwOpen(false)} onDone={() => { setPwOpen(false); setNotice("Password updated."); }} />}
+      {pwOpen && <ChangePassword onClose={() => setPwOpen(false)} onDone={() => { setPwOpen(false); flash("Password updated."); }} />}
       {deleteOpen && (
         <Modal onClose={() => setDeleteOpen(false)} className="wl-modal--sm">
           <h2>Delete your account?</h2>

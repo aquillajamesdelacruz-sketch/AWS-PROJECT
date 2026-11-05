@@ -127,3 +127,5 @@
 .ai-image__remove { justify-self: start; padding: 0; border: 0; background: none; color: #ef4444; font: 700 13px "Nunito", sans-serif; cursor: pointer; }
 .ai-note { margin: 10px 0 4px; padding: 10px 12px; border-radius: 10px; background: #fff7ed; color: #9a3412; font-size: 13px; line-height: 1.4; }
 .ai-error { margin: 14px 0 0; padding: 10px 12px; border-radius: 10px; background: #fef2f2; color: #b91c1c; font-size: 13px; line-height: 1.4; }
+.ai-error--field { margin: 6px 0 12px; padding: 6px 10px; font-size: 12px; }
+.ai-input[aria-invalid="true"] { border-color: #dc2626; }
