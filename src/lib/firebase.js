@@ -152,19 +152,15 @@ export const listenItems = (uid, callback) => getItems(uid, callback);
 
 
 // ========================================================================================= Collection functions
-// NOTE (added): Collections follow the same pattern as the item functions above.
-// They are stored under  users/{uid}/collections/{collectionId}
-// and each one looks like { id, name, color, createdAt }.
-// Items point to a collection by its NAME (item.collection), so the delete
-// function below also clears that field on the items that belonged to it.
 
-// CREATE: add a collection (push() makes a unique id, same as addItem)
+
+// CREATE: add a collection
 export const addCollection = async (uid, collection) => {
   const newRef = push(ref(db, `users/${uid}/collections`));
 
   await set(newRef, {
-    ...collection,          // { name, color } from the Create Collection modal
-    id: newRef.key,         // keep the key inside the record so the UI can use it
+    ...collection,          
+    id: newRef.key,        
     createdAt: Date.now()
   });
 
@@ -172,19 +168,17 @@ export const addCollection = async (uid, collection) => {
 };
 
 // READ: real-time listener, same shape as getItems.
-// Returns the unsubscribe function so React can clean it up.
 export const listenCollections = (uid, callback) => {
   const collectionsRef = ref(db, `users/${uid}/collections`);
 
   return onValue(collectionsRef, (snapshot) => {
     const data = snapshot.val() || {};
 
-    // oldest first, so the list does not jump around (push ids are time based, but be explicit)
     callback(Object.values(data).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)));
   });
 };
 
-// UPDATE: change fields of one collection (e.g. rename or recolor).
+// UPDATE: change fields of one collection.
 // If the NAME changes, the items that use the old name are moved to the new one.
 export const updateCollection = async (uid, collectionId, updatedData, oldName) => {
   const updates = {};
@@ -207,7 +201,6 @@ export const updateCollection = async (uid, collectionId, updatedData, oldName) 
 };
 
 // DELETE: remove collections by id. The items inside are KEPT, only their
-// collection field is cleared (same behavior the old local-state code had).
 export const deleteCollections = async (uid, collectionIds, collectionNames = []) => {
   const updates = {};
 
@@ -229,11 +222,8 @@ export const deleteCollections = async (uid, collectionIds, collectionNames = []
 
 
 // ========================================================================================= Purchase functions
-// NOTE (added): "Bought and Savings" data. Stored at users/{uid}/purchases/{id}.
-// A purchase is created when the user taps "Mark as bought" on a watchlist item.
 
-// CREATE: move an item from the watchlist to purchases in ONE multi-path update,
-// so you can never end up with the item in both places (or in neither).
+// CREATE: move an item from the watchlist to purchases
 export const markAsBought = async (uid, item, paid) => {
   const purchaseRef = push(ref(db, `users/${uid}/purchases`));
   const paidAmount = Number(paid) || Number(item.price) || 0;
@@ -258,7 +248,7 @@ export const markAsBought = async (uid, item, paid) => {
   return purchaseRef.key;
 };
 
-// READ: real-time listener (newest first), same shape as listenItems
+// READ: real-time listener same shape as listenItems
 export const listenPurchases = (uid, callback) => {
   const purchasesRef = ref(db, `users/${uid}/purchases`);
 
@@ -276,18 +266,16 @@ export const deletePurchase = async (uid, purchaseId) => {
 
 // ========================================================================================= Session, profile and settings
 
-// SESSION: tells React when someone logs in or out (also fires once on page load,
-// which is how a refresh keeps the user logged in). Returns the unsubscribe function.
+// Tells React when someone logs in or out
 export const watchAuth = (callback) => onAuthStateChanged(auth, callback);
 
-// READ the profile saved by register() -> { username, email, contactNumber, ... } or null
+// READ the profile saved by register
 export const getUserProfile = async (uid) => {
   const snap = await get(ref(db, "users/" + uid));
   return snap.exists() ? snap.val() : null;
 };
 
 // Google sign-in never calls register(), so those users have no profile yet.
-// This creates one the first time (and leaves existing profiles untouched).
 export const ensureUserRecord = async (user) => {
   const profileRef = ref(db, "users/" + user.uid);
   const snap = await get(profileRef);
@@ -300,11 +288,11 @@ export const ensureUserRecord = async (user) => {
     contactNumber: "",
     createdAt: new Date().toISOString()
   };
-  await update(profileRef, profile);   // update (not set) so items/collections are never wiped
+  await update(profileRef, profile);
   return profile;
 };
 
-// SETTINGS (notifications + theme + email) live at users/{uid}/settings
+// Settings notifications theme email things leik dat
 export const saveSettings = async (uid, patch) => {
   await update(ref(db, `users/${uid}/settings`), patch);
 };
@@ -312,7 +300,7 @@ export const saveSettings = async (uid, patch) => {
 export const listenSettings = (uid, callback) =>
   onValue(ref(db, `users/${uid}/settings`), (snapshot) => callback(snapshot.val() || {}));
 
-// CHANGE PASSWORD: Firebase wants the user to prove the old password first (re-authenticate).
+// change password.
 export const changePassword = async (currentPassword, newPassword) => {
   const user = auth.currentUser;
   if (!user) throw new Error("Please log in again.");
@@ -327,8 +315,7 @@ export const changePassword = async (currentPassword, newPassword) => {
   await updatePassword(user, newPassword);
 };
 
-// DELETE ACCOUNT: database record first (items, collections and purchases live inside it),
-// then the login itself. Throws "auth/requires-recent-login" if the login is too old.
+// delete account
 export const deleteAccount = async () => {
   const user = auth.currentUser;
   if (!user) return;
