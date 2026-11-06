@@ -121,7 +121,6 @@ export default function DashboardHome({ items = [], purchases = [], collections 
         <article className="dh-drop">
           <header>
             <div><h2>Today’s Biggest Drop</h2><p>as of {today()}</p></div>
-            <button type="button" aria-label="More options">•••</button>
           </header>
           {drop ? (
             <>

@@ -1,14 +1,10 @@
 /* Sign-up reuses the LogIn layout (login.css) and fits the longer form on one screen. */
-.su { padding-top: clamp(12px, 4.5vh, 44px); }
+/* The page padding and the mascot size are NOT overridden here: they come from login.css,
+   so the mascot sits in exactly the same spot on both pages. */
 .su .li-intro { margin-top: 0; }
 
 /* Both sides sit in the vertical middle of the page (the form card is no longer stuck at the top) */
 .su .li-layout { align-items: center; }
-
-/* Bigger title, subtitle and mascot */
-.su .li-title { font-size: clamp(28px, min(4.1vw, 6.2vh), 56px); }
-.su .li-sub { margin-top: 10px; font-size: clamp(14px, 2.2vh, 20px); }
-.su .li-stage { height: clamp(200px, 62vh, 600px); margin-top: clamp(10px, 3vh, 28px); }
 
 .su .li-card { padding: clamp(12px, 3.2vh, 30px) clamp(24px, 4vw, 64px) clamp(12px, 3.4vh, 32px); }
 .su .li-card__logo { height: clamp(28px, 4.4vh, 40px); margin-bottom: clamp(5px, 1.6vh, 14px); }
@@ -30,7 +26,7 @@
 
 .su .li-label { margin-bottom: clamp(3px, .8vh, 8px); }
 .su .li-input { height: clamp(30px, 4.5vh, 42px); margin-bottom: clamp(7px, 2vh, 18px); }
-.su .li-row { margin-top: 0; }
+.su .li-row { margin-top: 0; margin-bottom: 0; }   /* sign-up already spaces its button with .su-submit */
 .su .li-show { margin-top: clamp(0px, .4vh, 4px); }
 .su-error { margin: clamp(6px, 1.4vh, 12px) 0 0; }
 .su-submit { margin-top: clamp(8px, 2.2vh, 20px); }

@@ -4,6 +4,8 @@ import "./landing.css";
 import logo from "../assets/Logo.png";
 import mascot from "../assets/Mascot.png";
 import seal from "../assets/bulsu.png";
+import upFox from "../assets/up.png";
+import downFox from "../assets/down.png";
 
 const NAV_ITEMS = [
   { label: "Home", id: "home" },
@@ -34,19 +36,6 @@ const MailIcon = () => (
 );
 const PhoneIcon = () => (
   <Icon><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" /></Icon>
-);
-
-const TrendThumb = ({ direction }) => (
-  <span className={`pf-notif__thumb pf-notif__thumb--${direction}`} aria-hidden="true">
-    <svg viewBox="0 0 32 32" width="26" height="26" fill="none" strokeWidth="3"
-         strokeLinecap="round" strokeLinejoin="round">
-      {direction === "down" ? (
-        <><polyline points="4,8 13,17 18,12 27,23" /><polyline points="20,23 27,23 27,16" /></>
-      ) : (
-        <><polyline points="4,24 13,15 18,20 27,9" /><polyline points="20,9 27,9 27,16" /></>
-      )}
-    </svg>
-  </span>
 );
 
 const FEATURES = [
@@ -114,14 +103,12 @@ export default function LandingPage() {
             <img className="pf-mascot" src={mascot} alt="PeekyFox mascot waving" />
 
             <div className="pf-notif pf-notif--drop" aria-hidden="true">
-              <img className="pf-notif__fox" src={mascot} alt="" />
-              <TrendThumb direction="down" />
+              <img className="pf-notif__pic" src={downFox} alt="" />
               <span>Product Price Drop!</span>
             </div>
             <div className="pf-notif pf-notif--rise" aria-hidden="true">
               <span>Product Price Increased!</span>
-              <TrendThumb direction="up" />
-              <img className="pf-notif__fox" src={mascot} alt="" />
+              <img className="pf-notif__pic" src={upFox} alt="" />
             </div>
           </section>
 

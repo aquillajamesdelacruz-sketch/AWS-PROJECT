@@ -122,6 +122,7 @@ body { margin: 0; font-family: "Nunito", system-ui, sans-serif; }
   justify-content: space-between;
   align-items: center;
   margin-top: calc(-1 * clamp(5px, 1.55vh, 14px));
+  margin-bottom: clamp(10px, 2.6vh, 22px);   /* space between the row and the Sign in button */
 }
 .li-show {
   display: inline-flex; align-items: center; gap: 8px;

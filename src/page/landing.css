@@ -207,31 +207,23 @@ html { scroll-behavior: smooth; }
 .pf-notif--drop { left: calc(var(--w) * 0.748); top: calc(var(--w) * 0.479); }
 .pf-notif--rise { left: calc(var(--w) * 0.745); top: calc(var(--w) * 0.56); }
 
-.pf-notif__thumb {
-  display: grid;
-  place-items: center;
-  width: calc(var(--w) * 0.04);
-  height: calc(var(--w) * 0.032);
-  border: 1px solid #e2e8f0;
-  border-radius: 0.5rem;
-  background: #f8fafc;
+/* Fox picture (up / down) pops out of the top of each card */
+.pf-notif--drop, .pf-notif--rise {
+  justify-content: center;
+  min-height: calc(var(--w) * 0.046);
 }
-.pf-notif__thumb svg { width: 70%; height: auto; }
-.pf-notif__thumb--down svg { stroke: #dc2626; }
-.pf-notif__thumb--up svg { stroke: #16a34a; }
-
-.pf-notif__fox {
+.pf-notif--drop { padding-left: calc(var(--w) * 0.07); }    /* room for the fox on the left */
+.pf-notif--rise { padding-right: calc(var(--w) * 0.07); }   /* room for the fox on the right */
+.pf-notif__pic {
   position: absolute;
-  width: calc(var(--w) * 0.045);
-  height: calc(var(--w) * 0.045);
-  object-fit: cover;
-  object-position: 50% 12%;
-  border-radius: 50%;
-  background: #ffe2cc;
-  border: 2px solid #fff;
+  bottom: calc(var(--w) * -0.004);
+  width: calc(var(--w) * 0.052);
+  height: auto;
+  filter: drop-shadow(0 4px 6px rgba(15, 23, 42, 0.18));
+  pointer-events: none;
 }
-.pf-notif--drop .pf-notif__fox { left: calc(var(--w) * 0.004); top: calc(var(--w) * -0.03); }
-.pf-notif--rise .pf-notif__fox { right: calc(var(--w) * -0.012); top: calc(var(--w) * -0.015); }
+.pf-notif--drop .pf-notif__pic { left: calc(var(--w) * 0.008); }
+.pf-notif--rise .pf-notif__pic { right: calc(var(--w) * 0.008); }
 
 /* ===== Shared section type ===== */
 .pf-eyebrow {
@@ -459,10 +451,12 @@ a.pf-contact__value:hover { color: var(--orange); }
     padding: 0.7rem 1rem;
     font-size: 0.9rem;
   }
-  .pf-notif__thumb { width: 2.75rem; height: 2.25rem; }
-  .pf-notif__fox { width: 2.75rem; height: 2.75rem; }
-  .pf-notif--drop .pf-notif__fox { left: 0.5rem; top: -1.5rem; }
-  .pf-notif--rise .pf-notif__fox { right: 0.5rem; top: -1.5rem; }
+  .pf-notif { margin-top: 2.75rem; min-height: 3rem; }
+  .pf-notif--drop { padding-left: 4.75rem; }
+  .pf-notif--rise { padding-right: 4.75rem; }
+  .pf-notif__pic { width: 3.5rem; bottom: -0.25rem; }
+  .pf-notif--drop .pf-notif__pic { left: 0.75rem; }
+  .pf-notif--rise .pf-notif__pic { right: 0.75rem; }
 
   .pf-features { padding: 3rem var(--pad); }
   .pf-features__grid { grid-template-columns: 1fr; margin-top: 2rem; max-width: 30rem; }

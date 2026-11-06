@@ -20,12 +20,12 @@ const detectStore = (url) => {
 const parse = (v) => Number(String(v).replace(/[^0-9.]/g, "")) || 0;
 const peso = (n) => "₱" + parse(n).toLocaleString("en-PH");
 
-function StepLine() {
+function StepLine({ on = false }) {
   return (
-    <svg className="ai-line" width="106" height="24" viewBox="0 0 106 24" fill="none" aria-hidden="true">
-      <path d="M1 12h8l5-7 7 14 7-14 7 14 6-7h14" stroke="#f97316" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M70 12c8-9 22-9 28 0-6 9-20 9-28 0z" fill="#f97316" />
-      <path d="M99 7l5-3M99 17l5 3M100 12h5" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" />
+    <svg className={`ai-line${on ? " is-on" : ""}`} width="106" height="24" viewBox="0 0 106 24" fill="none" aria-hidden="true">
+      <path className="ai-line__wave" d="M1 12h8l5-7 7 14 7-14 7 14 6-7h14" stroke="#f97316" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path className="ai-line__body" d="M70 12c8-9 22-9 28 0-6 9-20 9-28 0z" fill="#f97316" />
+      <path className="ai-line__tail" d="M99 7l5-3M99 17l5 3M100 12h5" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
@@ -258,9 +258,9 @@ export default function AddItemModal({ initialUrl = "", collections = [], watchl
 
         <ol className="ai-steps" aria-label={`Step ${step + 1} of 3`}>
           {STEPS.map((label, i) => (
-            <li key={label} className={i === step ? "is-current" : ""}>
+            <li key={label} className={i === step ? "is-current" : i < step ? "is-done" : ""}>
               <span>{i + 1} {label}</span>
-              {i < STEPS.length - 1 && <StepLine />}
+              {i < STEPS.length - 1 && <StepLine on={i < step} />}
             </li>
           ))}
         </ol>
