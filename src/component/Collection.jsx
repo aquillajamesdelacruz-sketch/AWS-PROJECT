@@ -1,6 +1,5 @@
+import { CloseIcon } from "./Icons.jsx";
 import { useMemo, useState } from "react";
-import "./Watchlist.css";
-import "./Collection.css";
 import mascot from "../assets/Mascot.png";
 import sleep from "../assets/sleep.png";
 import { CardView, Modal } from "./Watchlist.jsx";
@@ -17,7 +16,7 @@ const PencilI = () => <I><path d="M4 20l4-1 11-11-3-3L5 16l-1 4zM14 6l3 3" /></I
 const GridI = () => <I><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></I>;
 const ListI = () => <I><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" /></I>;
 const TrashI = () => <I><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" /></I>;
-const FlagI = () => <I size={26}><path d="M5 21V4h12l-2 4 2 4H5" /></I>;
+const FlagI = () => <I size={20}><path d="M5 21V4h12l-2 4 2 4H5" /></I>;
 
 /* ---------- create collection ---------- */
 function CreateCollection({ existing, onClose, onCreate }) {
@@ -37,7 +36,7 @@ function CreateCollection({ existing, onClose, onCreate }) {
     <Modal onClose={onClose} className="cl-modal">
       <header className="wl-modal__head">
         <div><h2>Create a new collection</h2><p className="wl-muted">Give your next little dream a home.</p></div>
-        <button type="button" className="wl-x" aria-label="Close" onClick={onClose}>×</button>
+        <button type="button" className="wl-x" aria-label="Close" onClick={onClose}><CloseIcon /></button>
       </header>
       <form onSubmit={submit}>
         <label className="wl-label" htmlFor="cl-name">Collection Name</label>
@@ -48,10 +47,10 @@ function CreateCollection({ existing, onClose, onCreate }) {
         <p className="wl-label cl-colorlabel" id="cl-color">Choose a color</p>
         <div className="cl-swatches" role="radiogroup" aria-labelledby="cl-color">
           {COLORS.map((c) => (
-            <button key={c.value} type="button" role="radio" aria-checked={color === c.value} aria-label={c.name}
-              className={`cl-swatch${color === c.value ? " is-on" : ""}`} style={{ "--c": c.value }} onClick={() => setColor(c.value)}>
-              <i>{color === c.value && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5 9-10" /></svg>}</i>
-            </button>
+            <label key={c.value} className={`cl-swatch${color === c.value ? " is-on" : ""}`} style={{ "--c": c.value }}>
+              <input type="radio" name="collection-color" value={c.value} checked={color === c.value} onChange={() => setColor(c.value)} aria-label={c.name} />
+              <i>{color === c.value && <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5 9-10" /></svg>}</i>
+            </label>
           ))}
         </div>
 
@@ -69,7 +68,6 @@ function Detail({ collection, items, onBack, onViewItem, onAddItem }) {
   const [showAll, setShowAll] = useState(false);
   const s = statsFor(items);
   const shown = showAll ? items : items.slice(0, 4);
-  const cur = Math.min(82, Math.max(18, s.progress * 100));
 
   return (
     <div className="wl cl">
@@ -89,7 +87,7 @@ function Detail({ collection, items, onBack, onViewItem, onAddItem }) {
                 <span className="cl-dot" style={{ left: `${s.progress * 100}%` }} />
                 <span className="cl-flag"><FlagI /></span>
                 <small className="cl-lbl cl-lbl--start">Starting: {peso(s.start)}</small>
-                <small className="cl-lbl" style={{ left: `${cur}%`, transform: "translateX(-50%)" }}>Current: {peso(s.current)}</small>
+                <small className="cl-lbl cl-lbl--current">Current: {peso(s.current)}</small>
                 <small className="cl-lbl cl-lbl--end">Goal: <b>{peso(s.goal)}</b></small>
               </div>
             </>
@@ -183,7 +181,7 @@ export default function Collection({ items, collections, onCreate, onDelete, onV
                 <small>{c.items.length} {c.items.length === 1 ? "item" : "items"}</small>
                 <h3>{c.name}</h3>
                 <strong>{peso(s.current)}</strong>
-                <span className="cl-bar" role="progressbar" aria-valuenow={s.percent} aria-valuemin="0" aria-valuemax="100"><i style={{ width: `${s.progress * 100}%` }} /></span>
+                <span className="cl-bar" role="progressbar" aria-label={`${c.name} target progress`} aria-valuenow={s.percent} aria-valuemin="0" aria-valuemax="100"><i style={{ width: `${s.progress * 100}%` }} /></span>
               </button>
             );
           })}

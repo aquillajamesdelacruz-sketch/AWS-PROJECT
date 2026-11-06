@@ -1,8 +1,9 @@
+import { CloseIcon } from "../component/Icons.jsx";
+import Dialog from "../component/Dialog.jsx";
+import { celebrate } from "../lib/celebrate.js";
 import { sendPriceDropEmail, emailAlertsConfigured } from "../lib/priceAlert.js";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import "./dashboard.css";
-import "../styles/Theme.css";
 import logo from "../assets/Logo.png";
 import mascot from "../assets/Mascot.png";
 import peek from "../assets/peek.png";
@@ -28,7 +29,7 @@ import {
 } from "../lib/firebase.js";
 
 const Icon = ({ children }) => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
     strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     {children}
   </svg>
@@ -101,13 +102,7 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
   const [focusId, setFocusId] = useState(null);
   const [logoutOpen, setLogoutOpen] = useState(false);
 
-  // Escape closes the log out confirmation
-  useEffect(() => {
-    if (!logoutOpen) return;
-    const onKey = (e) => e.key === "Escape" && setLogoutOpen(false);
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [logoutOpen]);
+
 
   const [items, setItems] = useState([]);
   const [purchases, setPurchases] = useState([]);   // added: bought items from Firebase (feeds the savings charts)
@@ -271,6 +266,7 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
     const user = auth.currentUser;
     if (!user) return;
     await markAsBought(user.uid, item, item.price);
+    celebrate();
   };
 
   // added: create a collection in Firebase (the listener above refreshes the UI)
@@ -378,6 +374,7 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
 
   return (
     <div className="db-app">
+      <a className="skip-link" href="#main-content">Skip to content</a>
       {/* ---------- Sidebar ---------- */}
       <aside className="db-side">
         <img className="db-side__logo" src={logo} alt="PeekyFox" />
@@ -414,7 +411,8 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
       </aside>
 
       {/* ---------- Main ---------- */}
-      <main className="db-main">
+      <main className="db-main" id="main-content" tabIndex={-1}>
+        <div className="db-route" key={active}>
         {active === "Watchlist" ? (
 
           // firebase added
@@ -478,6 +476,7 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
           )}
           </>
         )}
+        </div>
       </main>
 
       {/* added: on phones/tablets the sidebar is hidden, so this bottom bar is the navigation.
@@ -514,29 +513,27 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
 
       {/* ---------- Log out confirmation ---------- */}
       {logoutOpen && (
-        <div className="db-overlay db-overlay--top" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && setLogoutOpen(false)}>
-          <div className="db-confirm" role="alertdialog" aria-modal="true" aria-labelledby="db-logout-title" aria-describedby="db-logout-desc">
+        <Dialog onClose={() => setLogoutOpen(false)} overlayClassName="db-overlay db-overlay--top" className="db-confirm" role="alertdialog" labelledBy="db-logout-title" describedBy="db-logout-desc">
             <h2 id="db-logout-title">Log out?</h2>
             <p id="db-logout-desc">You’ll need to sign in again to see your watchlist.</p>
             <div className="db-confirm__actions">
               <button type="button" className="db-confirm__btn" autoFocus onClick={() => setLogoutOpen(false)}>Stay logged in</button>
               <button type="button" className="db-confirm__btn db-confirm__btn--primary" onClick={confirmLogout}>Log out</button>
             </div>
-          </div>
-        </div>
+        </Dialog>
       )}
 
       {/* ---------- Onboarding modal ---------- */}
       {open && (
-        <div className="db-overlay" role="presentation">
-          <div className="db-modal" role="dialog" aria-modal="true" aria-label="Meet Pixie">
-            <button type="button" className="db-modal__close" aria-label="Close" onClick={() => setOpen(false)}>×</button>
+        <Dialog onClose={() => setOpen(false)} overlayClassName="db-overlay" className="db-modal" labelledBy="onboarding-title">
+            <button type="button" className="db-modal__close" aria-label="Close" onClick={() => setOpen(false)}><CloseIcon /></button>
 
-            <ol className="db-steps" aria-label={`Step ${step + 1} of ${STEPS.length}`}>
-              {STEPS.map((_, i) => (
-                <li key={i} className={`db-step${i === step ? " is-current" : i < step ? " is-done" : ""}`}>{i + 1}</li>
-              ))}
-            </ol>
+            <div className="db-onboarding-progress">
+              <div className="db-onboarding-progress__label"><span>Getting started</span><span>Step {step + 1} of {STEPS.length}</span></div>
+              <div className="db-onboarding-progress__track" role="progressbar" aria-label="Getting started" aria-valuemin={0} aria-valuemax={STEPS.length} aria-valuenow={step + 1} aria-valuetext={`Step ${step + 1} of ${STEPS.length}`}>
+                <span className="db-onboarding-progress__fill" style={{ width: `${((step + 1) / STEPS.length) * 100}%` }} />
+              </div>
+            </div>
 
             <div className="db-modal__body">
               <div className="db-modal__stage">
@@ -544,14 +541,13 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
                 <span className="db-modal__shadow" />
               </div>
               <div className="db-modal__copy">
-                <h2>{STEPS[step].title}</h2>
+                <h2 id="onboarding-title">{STEPS[step].title}</h2>
                 <p>{STEPS[step].text}</p>
               </div>
             </div>
 
             <button type="button" className="db-next" onClick={next}>{isLast ? "Get started" : "Next"}</button>
-          </div>
-        </div>
+        </Dialog>
       )}
     </div>
   );

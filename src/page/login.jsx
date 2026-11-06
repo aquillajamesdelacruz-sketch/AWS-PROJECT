@@ -1,7 +1,7 @@
+import GoogleIcon from "../component/GoogleIcon.jsx";
 
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import "./login.css";
 import logo from "../assets/Logo.png";
 import mascot from "../assets/Mascot.png";
 
@@ -9,16 +9,6 @@ import { login, googleSignIn, ensureUserRecord } from "../lib/firebase.js";
 import { validateLogin, MESSAGES } from "../lib/validation/schemas.js";
 import { loginErrorMessage } from "../lib/validation/authErrors.js";
 
-function GoogleIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 48 48" aria-hidden="true">
-      <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/>
-      <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.2 5.5-4.7 7.2l7.6 5.9c4.4-4.1 6.9-10.1 6.9-17.6z"/>
-      <path fill="#FBBC05" d="M10.5 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.9-6.1z"/>
-      <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.3 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/>
-    </svg>
-  );
-}
 
 function EyeIcon({ off }) {
   return (
@@ -125,11 +115,10 @@ const LogIn = ({ onLogin }) => {
         {/* Left Section */}
         <section className="li-intro">
 
-          <h1 className="li-title">
-            Track your favorites
-            <br />
-            with <span className="li-title__accent">PIXIE!</span>
-          </h1>
+          <h2 className="li-title">
+            Your favorites.<br />
+            <span className="li-title__accent">Worth watching.</span>
+          </h2>
 
           <p className="li-sub">
             Track your favorites, catch price drops, and save more.
@@ -151,15 +140,15 @@ const LogIn = ({ onLogin }) => {
         {/* Login Card */}
         <section className="li-card" aria-labelledby="li-welcome">
 
-          <img
+          <Link className="li-brand" to="/" aria-label="PeekyFox home"><img
             className="li-card__logo"
             src={logo}
             alt="PeekyFox"
-          />
+          /></Link>
 
-          <h2 id="li-welcome" className="li-card__title">
+          <h1 id="li-welcome" className="li-card__title">
             Welcome back!
-          </h2>
+          </h1>
 
           <p className="li-card__sub">
             Sign in to keep an eye on your favorites.
@@ -274,7 +263,7 @@ const LogIn = ({ onLogin }) => {
 
       {/* Footer */}
       <footer className="li-footer">
-        <span>© 2026 PeekyFox</span>
+        <span>&copy; 2026 PeekyFox</span>
         <a href="#privacy">Privacy</a>
         <a href="#help">Need help?</a>
       </footer>

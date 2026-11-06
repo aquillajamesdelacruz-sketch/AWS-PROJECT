@@ -65,7 +65,6 @@ export const MESSAGES = {
     emailRequired: "Email is required.",
     passwordRequired: "Password is required.",
     emailInvalid: "Please enter a valid email address.",
-    contactInvalid: "Enter a valid contact number.",
     passwordLength: "Password must be at least 8 characters.",
     passwordNumber: "Password must contain at least one number.",
     passwordSymbol: "Password must contain at least one symbol.",
@@ -160,7 +159,6 @@ export const validateLogin = (form) => firstError(loginSchema, form);
 const requiredSchema = z.object({
   email: z.string().trim().min(1, MESSAGES.auth.required),
   fullName: z.string().trim().min(1, MESSAGES.auth.required),
-  contact: z.string().trim().min(1, MESSAGES.auth.required),
   password: z.string().min(1, MESSAGES.auth.required),
   confirm: z.string().min(1, MESSAGES.auth.required),
 });
@@ -175,7 +173,6 @@ export const signupSchema = z
   .object({
     email: emailRule(MESSAGES.auth.required),
     fullName: z.string().trim().min(1, MESSAGES.auth.required),
-    contact: z.string().trim().regex(/^[0-9+\s()-]{7,20}$/, MESSAGES.auth.contactInvalid),
     password: passwordSchema,
     confirm: z.string(),
   })

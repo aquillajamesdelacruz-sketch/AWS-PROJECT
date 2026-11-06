@@ -1,6 +1,5 @@
+import { CloseIcon } from "./Icons.jsx";
 import { useEffect, useState } from "react";
-import "./Watchlist.css";
-import "./Settings.css";
 import { Modal } from "./Watchlist.jsx";
 import { changePassword } from "../lib/firebase.js";
 import { validateStockThreshold, MESSAGES, MAX_STOCK, DEFAULT_STOCK_THRESHOLD } from "../lib/validation/schemas.js";
@@ -21,7 +20,7 @@ function Chips({ options, value, onChange, label }) {
   return (
     <div className="st-chips" role="radiogroup" aria-label={label}>
       {options.map(([key, text]) => (
-        <button key={key} type="button" role="radio" aria-checked={value === key} className={value === key ? "is-on" : ""} onClick={() => onChange(key)}>{text}</button>
+        <label key={key} className={value === key ? "is-on" : ""}><input type="radio" name={label} value={key} checked={value === key} onChange={() => onChange(key)} />{text}</label>
       ))}
     </div>
   );
@@ -62,7 +61,7 @@ function ChangePassword({ onClose, onDone }) {
     <Modal onClose={onClose} className="wl-modal--md st-modal">
       <header className="wl-modal__head">
         <div><h2>Change password</h2><p className="wl-muted">Pick something you haven’t used before.</p></div>
-        <button type="button" className="wl-x" aria-label="Close" onClick={onClose}>×</button>
+        <button type="button" className="wl-x" aria-label="Close" onClick={onClose}><CloseIcon /></button>
       </header>
       <form onSubmit={submit}>
         <label className="wl-label" htmlFor="pw-cur">Current password</label>

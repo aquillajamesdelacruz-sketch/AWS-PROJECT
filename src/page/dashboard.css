@@ -1,12 +1,5 @@
 @import url("https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap");
 
-:root {
-  --orange: #f97316;
-  --navy: #1e3a8a;
-  --ink: #0f172a;
-  --muted: #64748b;
-  --peach: #fdecd9;
-}
 
 * { box-sizing: border-box; }
 body { margin: 0; font-family: "Nunito", system-ui, sans-serif; color: var(--ink); }
@@ -27,16 +20,16 @@ body { margin: 0; font-family: "Nunito", system-ui, sans-serif; color: var(--ink
   display: flex; flex-direction: column;
   min-height: 0;
   overflow: hidden;
-  padding: 24px 20px 20px;
+  padding: 24px 16px 16px;
   border-right: 1px solid #f1e9e1;
   background: #fff;
 }
-.db-side__logo { height: 36px; width: auto; align-self: flex-start; margin-bottom: 28px; }
+.db-side__logo { height: 36px; width: auto; align-self: flex-start; margin-bottom: 24px; }
 .db-side__group { margin: 0 0 8px; font-size: 9px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 
 .db-nav {
-  display: flex; align-items: center; gap: 14px; width: 100%;
-  margin-bottom: 8px; padding: 14px 16px;
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  margin-bottom: 8px; padding: 12px 16px;
   border: 0; border-radius: 12px; background: transparent; cursor: pointer;
   font: 600 14px "Nunito", sans-serif; color: var(--ink); text-align: left; white-space: nowrap;
   transition: background .15s;
@@ -45,17 +38,17 @@ body { margin: 0; font-family: "Nunito", system-ui, sans-serif; color: var(--ink
 .db-nav:hover { background: rgba(249, 115, 22, .08); }
 .db-nav.is-active { background: var(--peach); }
 .db-nav.is-active svg { color: var(--orange); }
-.db-side nav + .db-side__group { margin-top: 18px; }
+.db-side nav + .db-side__group { margin-top: 16px; }
 .db-side__group + .db-nav { margin-top: 0; }
 
 .db-tip {
-  position: relative; margin-top: auto; padding: 22px 12px 12px;
+  position: relative; margin-top: auto; padding: 24px 12px 12px;
   border: 1px solid #f3d8bd; border-radius: 12px; background: var(--peach);
   font-size: 11px; line-height: 1.45;
 }
 .db-tip p { margin: 0; }
 .db-tip__fox { position: absolute; left: 10px; top: -62px; width: 76px; height: auto; pointer-events: none; }   /* peeking over the box, paw resting on its edge */
-.db-side__foot { margin: 20px 0 0; font-size: 9px; color: var(--muted); }
+.db-side__foot { margin: 16px 0 0; font-size: 9px; color: var(--muted); }
 
 /* ---------- Main ---------- */
 .db-main {
@@ -65,7 +58,7 @@ body { margin: 0; font-family: "Nunito", system-ui, sans-serif; color: var(--ink
   overscroll-behavior: contain;
   scrollbar-width: thin;
   display: flex; flex-direction: column;
-  padding: 20px 28px;
+  padding: 16px 24px;
   background:
     radial-gradient(ellipse at 85% 5%, rgba(254, 226, 200, .45), transparent 45%),
     radial-gradient(ellipse at 15% 85%, rgba(203, 213, 225, .3), transparent 45%),
@@ -75,7 +68,7 @@ body { margin: 0; font-family: "Nunito", system-ui, sans-serif; color: var(--ink
 .db-top__fox { width: 56px; height: auto; }
 .db-top__text h1 { margin: 0; font-size: 26px; font-weight: 900; }
 .db-top__text p { margin: 4px 0 0; font-size: 11px; color: var(--muted); }
-.db-top__tools { margin-left: auto; display: flex; align-items: center; gap: 18px; }
+.db-top__tools { margin-left: auto; display: flex; align-items: center; gap: 16px; }
 .db-iconbtn { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 4px; display: grid; place-items: center; }
 .db-avatar {
   display: grid; place-items: center; width: 34px; height: 34px;
@@ -87,7 +80,7 @@ button:focus-visible { outline: 3px solid var(--navy); outline-offset: 2px; }
 /* ---------- Modal ---------- */
 .db-overlay {
   position: fixed; inset: 0; z-index: 50;
-  display: grid; place-items: center; padding: 20px;
+  display: grid; place-items: center; padding: 16px;
   background: rgba(60, 50, 40, .5);
   backdrop-filter: blur(2px);
 }
@@ -95,7 +88,7 @@ button:focus-visible { outline: 3px solid var(--navy); outline-offset: 2px; }
 .db-modal {
   position: relative;
   width: min(100%, 806px); min-height: 480px;
-  padding: 40px 50px 36px;
+  padding: 40px 48px 32px;
   border-radius: 28px;
   background: linear-gradient(180deg, #fff 0%, #fbf4ee 45%, #ebdccb 100%);
   box-shadow: 0 20px 50px rgba(0, 0, 0, .3);
@@ -106,27 +99,16 @@ button:focus-visible { outline: 3px solid var(--navy); outline-offset: 2px; }
   background: #fff; cursor: pointer; font-size: 16px; line-height: 1; color: var(--ink);
 }
 
-.db-steps {
-  position: relative; display: flex; justify-content: space-between;
-  margin: 0; padding: 0; list-style: none;
-}
-.db-steps::before {
-  content: ""; position: absolute; left: 20px; right: 20px; top: 50%;
-  height: 5px; transform: translateY(-50%);
-  border-top: 1px solid var(--orange); border-bottom: 1px solid #c7ced9;
-}
-.db-step {
-  position: relative; z-index: 1;
-  display: grid; place-items: center; width: 42px; height: 42px;
-  border: 4px solid #94a3b8; border-radius: 50%;
-  background: #e2e8f0; font-size: 17px; font-weight: 600; color: #94a3b8;
-  transition: all .25s;
-}
-.db-step.is-current { border-color: var(--orange); background: #fde3cc; color: var(--orange); }
-.db-step.is-done { border-color: var(--orange); background: var(--orange); color: #fff; }
+.db-onboarding-progress { margin-bottom:24px; }
+.db-onboarding-progress__label { display:flex; justify-content:space-between; gap:16px; margin-bottom:12px; font-size:.875rem; font-weight:700; color:var(--muted); }
+.db-onboarding-progress__track { height:12px; overflow:hidden; border-radius:999px; background:#e2e8f0; }
+.db-onboarding-progress__fill { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,#9a3412 0%,#c2410c 50%,#ea580c 100%); transition:width 350ms ease-out; }
+html[data-theme="dark"] .db-onboarding-progress__track { background:#334155; }
+html[data-theme="dark"] .db-onboarding-progress__fill { background:linear-gradient(90deg,#f97316,#fb923c,#fdba74); }
+@media (prefers-reduced-motion:reduce) { .db-onboarding-progress__fill { transition:none; } }
 
 .db-modal__body { display: flex; align-items: center; gap: 48px; margin-top: 8px; }
-.db-modal__stage { position: relative; flex: 0 0 260px; padding-bottom: 30px; }
+.db-modal__stage { position: relative; flex: 0 0 260px; padding-bottom: 32px; }
 .db-modal__stage img { position: relative; z-index: 1; display: block; width: 100%; height: auto; filter: drop-shadow(0 4px 6px rgba(0,0,0,.15)); }
 .db-modal__shadow {
   position: absolute; left: 5%; right: -5%; bottom: 14px; height: 26px;
@@ -153,9 +135,9 @@ button:focus-visible { outline: 3px solid var(--navy); outline-offset: 2px; }
   .db-app { grid-template-columns: minmax(0, 1fr); }   /* minmax(0) stops wide content from stretching the page */
   .db-side { display: none; }
   /* added: room for the fixed bottom tab bar so content is never hidden behind it */
-  .db-main { padding: 16px 16px calc(84px + env(safe-area-inset-bottom)); }
+  .db-main { padding: 16px 16px calc(80px + env(safe-area-inset-bottom)); }
   .db-tabbar { display: flex; }
-  .db-top { flex-wrap: wrap; gap: 10px 12px; }
+  .db-top { flex-wrap: wrap; gap: 8px 12px; }
   .db-top__fox { width: 44px; }
   .db-top__text h1 { font-size: 20px; }
   .db-modal { padding: 32px 24px 96px; }
@@ -171,13 +153,13 @@ button:focus-visible { outline: 3px solid var(--navy); outline-offset: 2px; }
 .db-empty {
   flex: 1;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  padding: clamp(12px, 4vh, 40px) 0 clamp(16px, 8vh, 80px); text-align: center;
+  padding: 40px 0 80px; text-align: center;
 }
 .db-empty__fox { width: auto; max-width: min(100%, 460px); max-height: 34vh; height: auto; margin-bottom: 8px; }
 .db-empty h2 { margin: 0; font-size: 25px; font-weight: 900; }
-.db-empty p { margin: 14px 0 30px; font-size: 14px; }
+.db-empty p { margin: 12px 0 32px; font-size: 14px; }
 .db-add {
-  height: 44px; padding: 0 38px; border: 0; border-radius: 8px;
+  height: 44px; padding: 0 40px; border: 0; border-radius: 8px;
   background: var(--orange); color: #fff; cursor: pointer;
   font: 800 13px "Nunito", sans-serif;
   box-shadow: 0 4px 12px rgba(249, 115, 22, .35);
@@ -188,14 +170,14 @@ button:focus-visible { outline: 3px solid var(--navy); outline-offset: 2px; }
 /* ---------- added: bottom tab bar (phones / tablets) ---------- */
 .db-tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
-  justify-content: space-around; gap: 2px;
-  padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+  justify-content: space-around; gap: 0px;
+  padding: 4px 4px calc(4px + env(safe-area-inset-bottom));
   background: #fff; border-top: 1px solid #f1e9e1;
   box-shadow: 0 -6px 20px rgba(15, 23, 42, .06);
 }
 .db-tabbar button {
-  flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 3px;
-  padding: 6px 2px; border: 0; border-radius: 10px; background: none; cursor: pointer;
+  flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 4px 0px; border: 0; border-radius: 10px; background: none; cursor: pointer;
   font: 700 10.5px "Nunito", sans-serif; color: var(--muted);
 }
 .db-tabbar button span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -204,13 +186,13 @@ button:focus-visible { outline: 3px solid var(--navy); outline-offset: 2px; }
 @media (min-width: 861px) { .db-tabbar { display: none; } }   /* wide screens use the sidebar instead */
 
 /* sidebar log out button sits above the Pixie tip */
-.db-nav--logout { margin: 18px 0 70px; color: var(--muted); }   /* 44px keeps Pixie's head from touching it */
+.db-nav--logout { margin: 16px 0 64px; color: var(--muted); }   /* 44px keeps Pixie's head from touching it */
 
 /* unread count on the bell */
 .db-iconbtn { position: relative; }
 .db-badge {
   position: absolute; top: -4px; right: -6px; min-width: 16px; height: 16px; padding: 0 4px;
-  border-radius: 8px; background: #ef4444; color: #fff; font: 800 10px/16px "Nunito", sans-serif; text-align: center;
+  border-radius: 8px; background: var(--danger); color: #fff; font: 800 10px/16px "Nunito", sans-serif; text-align: center;
 }
 
 @media (max-width: 480px) {
@@ -220,17 +202,17 @@ button:focus-visible { outline: 3px solid var(--navy); outline-offset: 2px; }
 
 /* ---------- Short windows: tighten the sidebar so every item still fits without scrolling ---------- */
 @media (min-width: 861px) and (max-height: 800px) {
-  .db-side { padding: 18px 16px 14px; }
-  .db-side__logo { margin-bottom: 18px; }
-  .db-nav { padding: 11px 14px; margin-bottom: 5px; }
+  .db-side { padding: 16px 16px 12px; }
+  .db-side__logo { margin-bottom: 16px; }
+  .db-nav { padding: 12px 12px; margin-bottom: 4px; }
   .db-side nav + .db-side__group { margin-top: 12px; }
-  .db-nav--logout { margin: 12px 0 66px; }
-  .db-tip { padding-top: 20px; }
+  .db-nav--logout { margin: 12px 0 64px; }
+  .db-tip { padding-top: 16px; }
   .db-side__foot { margin-top: 12px; }
 }
 @media (min-width: 861px) and (max-height: 680px) {
   .db-side__logo { height: 30px; margin-bottom: 12px; }
-  .db-nav { padding: 8px 12px; margin-bottom: 3px; font-size: 13px; }
+  .db-nav { padding: 8px 12px; margin-bottom: 4px; font-size: 13px; }
   .db-side nav + .db-side__group { margin-top: 8px; }
   .db-nav--logout { margin: 8px 0 64px; }
 }
@@ -242,12 +224,12 @@ button:focus-visible { outline: 3px solid var(--navy); outline-offset: 2px; }
 /* ---------- Log out confirmation ---------- */
 .db-overlay--top { z-index: 90; }
 .db-confirm {
-  width: min(100%, 400px); padding: 28px 28px 24px; border-radius: 24px;
+  width: min(100%, 400px); padding: 24px 24px 24px; border-radius: 24px;
   background: #fff; box-shadow: 0 20px 50px rgba(0, 0, 0, .3); text-align: left;
 }
 .db-confirm h2 { margin: 0; font-size: 24px; font-weight: 900; }
-.db-confirm p { margin: 10px 0 0; font-size: 14px; line-height: 1.5; color: var(--muted); }
-.db-confirm__actions { display: flex; gap: 12px; margin-top: 26px; }
+.db-confirm p { margin: 8px 0 0; font-size: 14px; line-height: 1.5; color: var(--muted); }
+.db-confirm__actions { display: flex; gap: 12px; margin-top: 24px; }
 .db-confirm__btn {
   flex: 1; height: 46px; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; color: var(--ink);
   cursor: pointer; font: 800 14px "Nunito", sans-serif; transition: transform .15s, background .15s;

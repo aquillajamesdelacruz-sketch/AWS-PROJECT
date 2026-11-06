@@ -2,7 +2,6 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { auth, getUserProfile, watchAuth } from "./lib/firebase.js";
 import { GuestOnly, RequireAuth } from "./Layout/RouteGuards.jsx";
-import "./App.css";
 
 const LandingPage = lazy(() => import("./page/landing.jsx"));
 const LoginPage = lazy(() => import("./page/login.jsx"));
@@ -15,7 +14,7 @@ const nameFromEmail = (email = "") =>
     .map((part) => part[0].toUpperCase() + part.slice(1)).join(" ");
 
 function PageFallback() {
-  return <main className="route-loading"><p>Loading page...</p></main>;
+  return <main className="route-loading" aria-busy="true"><p role="status">Loading page...</p><div className="route-skeleton" aria-hidden="true"><i /><i /><i /></div></main>;
 }
 
 export default function App() {

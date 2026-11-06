@@ -1,6 +1,4 @@
 import { useState } from "react";
-import "./Watchlist.css";
-import "./BoughtSavings.css";
 
 import { lastMonths, monthKey } from "../lib/Dashboardstats.js";
 
@@ -8,7 +6,7 @@ const peso = (n) => "₱" + Math.round(n).toLocaleString("en-PH");
 const sum = (list, key) => list.reduce((t, i) => t + i[key], 0);
 
 const Icon = ({ type }) => (
-  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     {type === "headphones" ? <><path d="M4 15v-3a8 8 0 0 1 16 0v3" /><rect x="3" y="14" width="4" height="6" rx="2" /><rect x="17" y="14" width="4" height="6" rx="2" /></>
       : type === "mat" ? <><rect x="3" y="4" width="18" height="6" rx="2.5" /><rect x="3" y="14" width="18" height="6" rx="2.5" /></>
       : <><path d="M5 8h14l-1 12H6L5 8z" /><path d="M9 8V6a3 3 0 0 1 6 0v2" /></>}
@@ -53,8 +51,8 @@ export default function BoughtSavings({ purchases = [], tools }) {
             const last = i === monthly.length - 1;
             return (
               <div className="bs-col" key={x.m}>
-                {last && <b className="bs-val">{peso(x.v)}</b>}
-                <i style={{ height: `${Math.max(8, (x.v / max) * 143)}px` }} />
+                <b className="bs-val">{last ? peso(x.v) : ""}</b>
+                <div className="bs-plot"><i style={{ height: `${(x.v / max) * 100}%` }} /></div>
                 <span className={last ? "is-now" : ""}>{x.m}</span>
               </div>
             );

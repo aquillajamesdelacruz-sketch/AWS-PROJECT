@@ -1,5 +1,7 @@
+import { CloseIcon } from "./Icons.jsx";
+import Dialog from "./Dialog.jsx";
+import { celebrate } from "../lib/celebrate.js";
 import { useEffect, useMemo, useState } from "react";
-import "./Watchlist.css";
 import mascot from "../assets/Mascot.png";
 import find from "../assets/find.png";
 import sleep from "../assets/sleep.png";
@@ -28,13 +30,6 @@ const historyOf = (it) => {
   return h.length > 1 ? h : [h[0], h[0]];
 };
 
-function useEscape(fn) {
-  useEffect(() => {
-    const h = (e) => e.key === "Escape" && fn();
-    window.addEventListener("keydown", h);
-    return () => window.removeEventListener("keydown", h);
-  }, [fn]);
-}
 
 /* ---------- icons ---------- */
 const I = ({ children, size = 20 }) => (
@@ -46,7 +41,7 @@ const PencilI = () => <I><path d="M4 20l4-1 11-11-3-3L5 16l-1 4zM14 6l3 3" /></I
 const GridI = () => <I><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></I>;
 const ListI = () => <I><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" /></I>;
 const TrashI = () => <I><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" /></I>;
-const SortI = () => <I size={18}><path d="M8 9l4-4 4 4M8 15l4 4 4-4" /></I>;
+const SortI = () => <I size={20}><path d="M8 9l4-4 4 4M8 15l4 4 4-4" /></I>;
 
 function Thumb({ item, className = "" }) {
   return item.image
@@ -54,18 +49,13 @@ function Thumb({ item, className = "" }) {
     : <span className={`wl-img wl-img--empty ${className}`} role="img" aria-label="No product photo"><I size={32}><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="9" cy="9" r="2" /><path d="M21 15l-5-5L5 21" /></I></span>;
 }
 
-export function Modal({ onClose, children, className = "" }) {
-  useEscape(onClose);
-  return (
-    <div className="wl-overlay" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className={`wl-modal ${className}`} role="dialog" aria-modal="true">{children}</div>
-    </div>
-  );
+export function Modal({ onClose, children, className = "", ...props }) {
+  return <Dialog onClose={onClose} className={`wl-modal ${className}`} {...props}>{children}</Dialog>;
 }
 
 function ProgressBar({ item }) {
   return (
-    <div className="wl-prog" role="progressbar" aria-valuenow={Math.round(progress(item) * 100)} aria-valuemin="0" aria-valuemax="100">
+    <div className="wl-prog" role="progressbar" aria-label="Progress toward target price" aria-valuenow={Math.round(progress(item) * 100)} aria-valuemin="0" aria-valuemax="100">
       <i style={{ width: `${progress(item) * 100}%` }} />
       <b />
     </div>
@@ -89,6 +79,8 @@ function ConfirmDelete({ onCancel, onConfirm }) {
 /* ---------- update item ---------- */
 function UpdateItem({ item, collections, onClose, onSave }) {
   const [name, setName] = useState(item.name);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
   const [price, setPrice] = useState(String(item.price));
   const [target, setTarget] = useState(String(item.target));
   const [collection, setCollection] = useState(item.collection || "");
@@ -97,8 +89,9 @@ function UpdateItem({ item, collections, onClose, onSave }) {
     <Modal onClose={onClose} className="wl-modal--md">
       <header className="wl-modal__head">
         <div><h2>Update an item</h2><p className="wl-muted">Update your product’s detail anytime.</p></div>
-        <button type="button" className="wl-x" aria-label="Close" onClick={onClose}>×</button>
+        <button type="button" className="wl-x" aria-label="Close" onClick={onClose}><CloseIcon /></button>
       </header>
+      {error && <p className="ai-error" role="alert">{error}</p>}
       <label className="wl-label" htmlFor="u-name">Product name</label>
       <input id="u-name" className="wl-input" value={name} onChange={(e) => setName(e.target.value)} />
       <div className="wl-fields">
@@ -115,8 +108,8 @@ function UpdateItem({ item, collections, onClose, onSave }) {
       </div>
       <div className="wl-actions wl-actions--end wl-rule">
         <button type="button" className="wl-btn wl-btn--ghost" onClick={onClose}>Cancel</button>
-        <button type="button" className="wl-btn wl-btn--primary" disabled={!name.trim()}
-          onClick={() => onSave({ ...item, name: name.trim(), price: parse(price), target: parse(target), collection, category })}>Save Update</button>
+        <button type="button" className="wl-btn wl-btn--primary" disabled={!name.trim() || saving}
+          onClick={async () => { setSaving(true); setError(""); try { await onSave({ ...item, name: name.trim(), price: parse(price), target: parse(target), collection, category }); } catch { setError("Could not save the update. Please try again."); setSaving(false); } }}>{saving ? "Saving..." : "Save update"}</button>
       </div>
     </Modal>
   );
@@ -125,6 +118,8 @@ function UpdateItem({ item, collections, onClose, onSave }) {
 /* ---------- product details / price history ---------- */
 function ProductModal({ item, onClose, onEdit, onDelete, onUpdate, onBought }) {
   const [tab, setTab] = useState("details");
+  const [buying, setBuying] = useState(false);
+  const [buyError, setBuyError] = useState("");
   // changed: everything below is calculated from the item's real history (not demo data)
   const entries = useMemo(() => historyOf(item), [item]);
   const hist = entries.map((e) => Number(e.price) || 0);
@@ -142,13 +137,14 @@ function ProductModal({ item, onClose, onEdit, onDelete, onUpdate, onBought }) {
   const line = pts.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`).join(" ");
 
   return (
-    <Modal onClose={onClose} className="wl-modal--lg">
+    <Modal onClose={onClose} className="wl-modal--lg" labelledBy="product-dialog-title">
+      <h2 id="product-dialog-title" className="sr-only">{item.name}</h2>
       <img className="wl-peek" src={find} alt="" />
-      <button type="button" className="wl-x wl-x--abs" aria-label="Close" onClick={onClose}>×</button>
+      <button type="button" className="wl-x wl-x--abs" aria-label="Close" onClick={onClose}><CloseIcon /></button>
 
-      <div className="wl-tabs" role="tablist">
+      <div className="wl-tabs" role="group" aria-label="Product view">
         {[["details", "Product Details"], ["history", "Price History"]].map(([k, l]) => (
-          <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? "is-on" : ""} onClick={() => setTab(k)}>{l}</button>
+          <button key={k} type="button" aria-pressed={tab === k} className={tab === k ? "is-on" : ""} onClick={() => setTab(k)}>{l}</button>
         ))}
       </div>
 
@@ -171,7 +167,7 @@ function ProductModal({ item, onClose, onEdit, onDelete, onUpdate, onBought }) {
             <div className="wl-ends"><span>Original: {peso(item.original)}</span><span>Target: {peso(item.target)}</span></div>
             <div className="wl-alert">
               <div><b>Tracking Alert</b><p>Notify me when the price is at or below {peso(item.target)}.</p></div>
-              <button type="button" role="switch" aria-checked={item.alert} className={`wl-switch${item.alert ? " is-on" : ""}`}
+              <button type="button" role="switch" aria-label="Price tracking alert" aria-checked={item.alert} className={`wl-switch${item.alert ? " is-on" : ""}`}
                 onClick={() => onUpdate({ ...item, alert: !item.alert })}><i /></button>
               <span>{item.alert ? "On" : "Off"}</span>
             </div>
@@ -199,6 +195,7 @@ function ProductModal({ item, onClose, onEdit, onDelete, onUpdate, onBought }) {
         </div>
       )}
 
+      {buyError && <p className="ai-error" role="alert">{buyError}</p>}
       <div className={`wl-detail__foot${tab === "history" ? " has-tip" : ""}`}>
         {tab === "history" && (
           <div className="wl-tip">
@@ -209,7 +206,7 @@ function ProductModal({ item, onClose, onEdit, onDelete, onUpdate, onBought }) {
         <div className="wl-actions wl-actions--end">
           <button type="button" className="wl-btn wl-btn--outline-red" onClick={onDelete}>Delete Item</button>
           {/* added: moves the item to "Bought and Savings" */}
-          {onBought && <button type="button" className="wl-btn wl-btn--ghost" onClick={() => onBought(item)}>Mark as bought</button>}
+          {onBought && <button type="button" className="wl-btn wl-btn--ghost" disabled={buying} onClick={async () => { setBuying(true); setBuyError(""); try { await onBought(item); } catch { setBuyError("Could not record this purchase. Please try again."); setBuying(false); } }}>{buying ? "Saving purchase..." : "Mark as bought"}</button>}
           <button type="button" className="wl-btn wl-btn--primary" onClick={onEdit}>Edit Item</button>
         </div>
       </div>
@@ -222,8 +219,8 @@ export function CardView({ items, edit, selected, toggle, open, actionLabel = "V
   return (
     <div className="wl-cards">
       {items.map((it) => (
-        <article key={it.id} className={`wl-card${selected.includes(it.id) ? " is-selected" : ""}`}
-          onClick={edit ? () => toggle(it.id) : undefined}>
+        <article key={it.id} className={`wl-card${selected.includes(it.id) ? " is-selected" : ""}`}>
+          {edit && <label className="wl-selection"><input type="checkbox" checked={selected.includes(it.id)} onChange={() => toggle(it.id)} /><span>Select {it.name}</span></label>}
           <Thumb item={it} className="wl-card__img" />
           <div className="wl-card__body">
             <h3>{it.name.split(",")[0]}</h3>
@@ -236,7 +233,7 @@ export function CardView({ items, edit, selected, toggle, open, actionLabel = "V
               <img src={mascot} alt="" />
               <p>{it.price <= it.target ? "Target hit! Time to buy." : `Almost there! Only ${peso(toTarget(it))} to go.`}</p>
             </div>
-            <button type="button" className="wl-btn wl-btn--primary wl-btn--full" onClick={(e) => { e.stopPropagation(); if (!edit) open(it.id); }}>{actionLabel}</button>
+            {!edit && <button type="button" className="wl-btn wl-btn--primary wl-btn--full" onClick={() => open(it.id)}>{actionLabel}</button>}
           </div>
         </article>
       ))}
@@ -245,28 +242,28 @@ export function CardView({ items, edit, selected, toggle, open, actionLabel = "V
 }
 
 function ListView({ items, edit, selected, toggle, open, sort, setSort }) {
-  const head = (key, label) => (
-    <button type="button" className="wl-sort" onClick={() => setSort(sort.key === key ? { key, dir: -sort.dir } : { key, dir: 1 })} aria-label={`Sort by ${label}`}>
-      {label}<SortI />
-    </button>
+  const heading = (key, label) => (
+    <th scope="col" aria-sort={sort.key === key ? (sort.dir === 1 ? "ascending" : "descending") : undefined}>
+      <button type="button" className="wl-sort" onClick={() => setSort(sort.key === key ? { key, dir: -sort.dir } : { key, dir: 1 })}>{label}<SortI /></button>
+    </th>
   );
   return (
-    <div className="wl-list" role="table">
-      <div className="wl-list__head" role="row">
-        <span>Product Image</span>{head("name", "Product Name")}{head("price", "Current Price")}<span>Status</span><span />
-      </div>
-      {items.map((it) => {
-        const ch = change(it);
-        return (
-          <div key={it.id} role="row" className={`wl-row${selected.includes(it.id) ? " is-selected" : ""}`} onClick={edit ? () => toggle(it.id) : undefined}>
-            <Thumb item={it} className="wl-row__img" />
-            <div><b>{it.name.split(",")[0]}</b><small>Starting Price: <strong>{peso2(it.original)}</strong></small></div>
-            <span className="wl-row__price">{peso2(it.price)}</span>
-            <span className={`wl-row__status${ch < 0 ? " is-down" : ch > 0 ? " is-up" : ""}`}>{ch > 0 ? "+" : ""}{ch} %</span>
-            <button type="button" className="wl-btn wl-btn--primary" onClick={(e) => { e.stopPropagation(); if (!edit) open(it.id); }}>View Product</button>
-          </div>
-        );
-      })}
+    <div className="wl-table-wrap">
+      <div className="wl-mobile-sort"><label className="wl-label" htmlFor="watchlist-sort">Sort products</label><select id="watchlist-sort" className="wl-input" value={sort.key || "default"} onChange={(event) => setSort({key:event.target.value === "default" ? null : event.target.value,dir:1})}><option value="default">Recently added</option><option value="name">Product name</option><option value="price">Current price</option></select><button type="button" className="wl-btn wl-btn--ghost" onClick={() => setSort({...sort,dir:-sort.dir})} disabled={!sort.key}>{sort.dir === 1 ? "Ascending" : "Descending"}</button></div>
+      <table className="wl-list">
+        <caption className="sr-only">Tracked products and current prices</caption>
+        <thead><tr><th scope="col">{edit ? "Select" : "Product image"}</th>{heading("name", "Product name")}{heading("price", "Current price")}<th scope="col">Change</th><th scope="col">Action</th></tr></thead>
+        <tbody>{items.map((it) => {
+          const ch = change(it);
+          return <tr key={it.id} className={`wl-row${selected.includes(it.id) ? " is-selected" : ""}`}>
+            <td data-label={edit ? "Select" : "Product image"}>{edit ? <label className="wl-selection"><input type="checkbox" checked={selected.includes(it.id)} onChange={() => toggle(it.id)} /><span className="sr-only">Select {it.name}</span></label> : <Thumb item={it} className="wl-row__img" />}</td>
+            <td data-label="Product name"><b>{it.name}</b><small>Starting price: {peso2(it.original)}</small></td>
+            <td data-label="Current price" className="wl-row__price">{peso2(it.price)}</td>
+            <td data-label="Change" className={`wl-row__status${ch < 0 ? " is-down" : ch > 0 ? " is-up" : ""}`}>{ch > 0 ? "+" : ""}{ch}%</td>
+            <td data-label="Action">{edit ? <span>{selected.includes(it.id) ? "Selected" : "Not selected"}</span> : <button type="button" className="wl-btn wl-btn--primary" aria-label={`View ${it.name}`} onClick={() => open(it.id)}>View product</button>}</td>
+          </tr>;
+        })}</tbody>
+      </table>
     </div>
   );
 }
@@ -334,9 +331,7 @@ export default function Watchlist({ items, collections = [], openId, onOpened, o
       {edit && (
         <div className="wl-editbar">
           <p>Pick items you want to delete.</p>
-          <button type="button" className="wl-red" onClick={() => setSelected(allSelected ? [] : shown.map((i) => i.id))}>
-            <span className={`wl-box${allSelected ? " is-on" : ""}`} />Select All
-          </button>
+          <label className="wl-selection"><input type="checkbox" checked={allSelected} onChange={() => setSelected(allSelected ? [] : shown.map((i) => i.id))} />Select all</label>
           <button type="button" className="wl-red wl-red--strong" disabled={!selected.length} onClick={() => setConfirm(selected)}><TrashI />Delete items</button>
         </div>
       )}
@@ -358,10 +353,10 @@ export default function Watchlist({ items, collections = [], openId, onOpened, o
 
       {detail && !editing && !confirm && (
         <ProductModal item={detail} onClose={() => setDetailId(null)} onUpdate={onUpdate}
-          onBought={(it) => { onBought?.(it); setDetailId(null); }}
+          onBought={async (it) => { await onBought?.(it); setDetailId(null); }}
           onEdit={() => setEditingId(detail.id)} onDelete={() => setConfirm([detail.id])} />
       )}
-      {editing && <UpdateItem item={editing} collections={collections} onClose={() => setEditingId(null)} onSave={(u) => { onUpdate(u); setEditingId(null); }} />}
+      {editing && <UpdateItem item={editing} collections={collections} onClose={() => setEditingId(null)} onSave={async (u) => { await onUpdate(u); celebrate({ subtle: true }); setEditingId(null); }} />}
       {confirm && <ConfirmDelete onCancel={() => setConfirm(null)} onConfirm={doDelete} />}
     </div>
   );

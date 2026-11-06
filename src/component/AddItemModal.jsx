@@ -1,5 +1,7 @@
+import { CloseIcon } from "./Icons.jsx";
+import Dialog from "./Dialog.jsx";
+import { celebrate } from "../lib/celebrate.js";
 import { useEffect, useRef, useState } from "react";
-import "./AddItemModal.css";
 import find from "../assets/find.png";
 import mascot from "../assets/Mascot.png";
 
@@ -55,7 +57,6 @@ export default function AddItemModal({ initialUrl = "", collections = [], watchl
   const [previewImage, setPreviewImage] = useState("");
 
   // added: image found by "Fetch"
-  const [fetchedImage, setFetchedImage] = useState("");        // the picture's original web address
   const [cloudImage, setCloudImage] = useState("");            // the same picture once it is in Cloudinary
   const [fetchNote, setFetchNote] = useState("");              // message shown under the badge after fetching
   const [uploadingImage, setUploadingImage] = useState(false); // true while the fetched image goes to Cloudinary
@@ -94,7 +95,6 @@ export default function AddItemModal({ initialUrl = "", collections = [], watchl
     clearBlob();
     blobUrl.current = URL.createObjectURL(file);
     setSelectedImage(file);
-    setFetchedImage("");
     setCloudImage("");
     setUploadingImage(false);
     setPreviewImage(blobUrl.current);
@@ -108,7 +108,6 @@ export default function AddItemModal({ initialUrl = "", collections = [], watchl
     setUploadingImage(false);
     clearBlob();
     setSelectedImage(null);
-    setFetchedImage("");
     setCloudImage("");
     setPreviewImage("");
   };
@@ -157,6 +156,7 @@ export default function AddItemModal({ initialUrl = "", collections = [], watchl
       setOriginal(info.original ? String(info.original) : "");
       setTarget("");
       removeImage();
+      if (info.name || info.price) celebrate({ subtle: true });
       setPhase("confirm");   // show the form now; the image keeps uploading in the background
 
       if (info.name && !info.price) notes.push("Pixie found the name but not the price. Please type the current price.");
@@ -164,7 +164,6 @@ export default function AddItemModal({ initialUrl = "", collections = [], watchl
       if (info.image) {
         const myImage = imageToken.current;
         const stale = () => isCancelled() || imageToken.current !== myImage;   // user picked/removed a picture meanwhile
-        setFetchedImage(info.image);
         setPreviewImage(info.image);     // shows the picture straight away
         setUploadingImage(true);
         try {
@@ -190,11 +189,7 @@ export default function AddItemModal({ initialUrl = "", collections = [], watchl
     return () => controller.abort();   // only stops the page request; the image upload is guarded by isCancelled()
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    const onKey = (e) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+
 
   
     // changed the save function, and added the image uplood raaa
@@ -242,6 +237,7 @@ export default function AddItemModal({ initialUrl = "", collections = [], watchl
 
         setToast(true);
         setPhase("success");
+        celebrate();
 
       } catch (error) {
         console.error(error);
@@ -269,14 +265,13 @@ export default function AddItemModal({ initialUrl = "", collections = [], watchl
     };
 
   return (
-    <div className="ai-overlay" role="presentation">
-      <div className="ai-modal" role="dialog" aria-modal="true" aria-labelledby="ai-title">
+    <Dialog onClose={onClose} overlayClassName="ai-overlay" className="ai-modal" labelledBy="ai-title">
         <header className="ai-head">
           <div>
             <h2 id="ai-title">Add an item</h2>
             <p>One link closer to a better price.</p>
           </div>
-          <button type="button" className="ai-close" aria-label="Close" onClick={onClose}>×</button>
+          <button type="button" className="ai-close" aria-label="Close" onClick={onClose}><CloseIcon /></button>
         </header>
 
         <ol className="ai-steps" aria-label={`Step ${step + 1} of 3`}>
@@ -423,7 +418,6 @@ export default function AddItemModal({ initialUrl = "", collections = [], watchl
           <>
             <div className="ai-success">
               <div className="ai-success__stage">
-                {[0, 1, 2, 3, 4, 5].map((i) => <i key={i} className={`ai-confetti ai-confetti--${i}`} />)}
                 <img src={mascot} alt="Pixie celebrating" />
               </div>
               <h3>Item tracked successfully!</h3>
@@ -431,19 +425,18 @@ export default function AddItemModal({ initialUrl = "", collections = [], watchl
                 {name.split(",")[0]} added to {collection || "your watchlist"}. We will notify you when it hits {peso(target)}.
               </p>
               <div className="ai-actions">
-                <button type="button" className="ai-btn ai-btn--primary" onClick={onClose}>Go to Dashboard</button>
+                <button type="button" className="ai-btn ai-btn--primary" onClick={onClose}>Done</button>
                 <button type="button" className="ai-btn ai-btn--ghost" onClick={reset}>Add another item</button>
               </div>
             </div>
             {toast && (
               <div className="ai-toast" role="status">
                 <span className="ai-toast__dot" />Item added to tracker.
-                <button type="button" aria-label="Dismiss" onClick={() => setToast(false)}>×</button>
+                <button type="button" aria-label="Dismiss" onClick={() => setToast(false)}><CloseIcon /></button>
               </div>
             )}
           </>
         )}
-      </div>
-    </div>
+    </Dialog>
   );
 }

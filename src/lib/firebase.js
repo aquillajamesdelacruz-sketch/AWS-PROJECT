@@ -47,7 +47,7 @@ export const db = getDatabase(app);
 export const auth = getAuth(app);
 export const provider = new GoogleAuthProvider();
 
-export const register = async (email, password, username, contactNumber) => {
+export const register = async (email, password, username) => {
   const response = await createUserWithEmailAndPassword(auth, email, password);
 
   //this gets the users id 
@@ -58,7 +58,6 @@ export const register = async (email, password, username, contactNumber) => {
     uid: user.uid,
     username: username,
     email: email,
-    contactNumber: contactNumber,
     createdAt: new Date().toISOString()
   });
 

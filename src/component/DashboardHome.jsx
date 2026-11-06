@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import "./DashboardHome.css";
+import { CloseIcon } from "./Icons.jsx";
+import Dialog from "./Dialog.jsx";
+import { useState } from "react";
 import { storeBreakdown, biggestDrop, topWatched, dropPercent, totalSaved, savedPercent, savingsTrend, trendPath, timeAgo } from "../lib/Dashboardstats.js";
 
 const peso = (n) => "₱" + Number(n).toLocaleString("en-PH", { minimumFractionDigits: 0 });
@@ -13,7 +14,7 @@ function Thumb({ image, alt, className = "" }) {
 
 function CollectionIcon({ type }) {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       {type === "gift"
         ? <><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M5 12v9h14v-9M12 8c-2-4-6-3-5 0M12 8c2-4 6-3 5 0"/></>
         : <rect x="4" y="4" width="16" height="16" rx="3"/>}
@@ -24,26 +25,11 @@ function CollectionIcon({ type }) {
 // panel now shows real notifications.
 // saved in Firebase so it survives a refresh.
 export function Notifications({ notifications = [], readAt = 0, enabled = true, onMarkRead, onClose }) {
-  const ref = useRef(null);
-
-  useEffect(() => {
-    const away = (e) => {
-      if (ref.current && !ref.current.contains(e.target) && !e.target.closest('[aria-label="Notifications"]')) onClose();
-    };
-    const esc = (e) => e.key === "Escape" && onClose();
-    document.addEventListener("mousedown", away);
-    document.addEventListener("keydown", esc);
-    return () => { 
-
-      document.removeEventListener("mousedown", away); 
-      document.removeEventListener("keydown", esc); };
-      
-  }, [onClose]);
-
   return (
-    <div className="dh-notif" ref={ref} role="dialog" aria-label="Notifications">
+    <Dialog className="dh-notif" overlayClassName="db-overlay" onClose={onClose} labelledBy="notifications-title">
       <div className="dh-notif__head">
-        <h2>Notifications</h2>
+        <h2 id="notifications-title">Notifications</h2>
+        <button type="button" onClick={onClose} aria-label="Close notifications" className="wl-x"><CloseIcon /></button>
         <button type="button" onClick={onMarkRead} disabled={!notifications.length}>Mark all as read</button>
       </div>
       {!enabled ? (
@@ -60,7 +46,7 @@ export function Notifications({ notifications = [], readAt = 0, enabled = true, 
           ))}
         </ul>
       )}
-    </div>
+    </Dialog>
   );
 }
 
@@ -161,7 +147,7 @@ export default function DashboardHome({ items = [], purchases = [], collections 
           {collections.map((c) => (
             <div className="dh-coll" key={c.id || c.name}>
               <div><CollectionIcon type="box" /><b>{c.name}</b><small>Target Total Price: <strong>{peso(c.goal)}</strong></small></div>
-              <div className="dh-bar" role="progressbar" aria-valuenow={Math.round(c.progress * 100)} aria-valuemin="0" aria-valuemax="100"><i style={{ width: `${c.progress * 100}%`, background: c.color }} /></div>
+              <div className="dh-bar" role="progressbar" aria-label={`${c.name} target progress`} aria-valuenow={Math.round(c.progress * 100)} aria-valuemin="0" aria-valuemax="100"><i style={{ width: `${c.progress * 100}%`, background: c.color }} /></div>
             </div>
           ))}
         </article>
