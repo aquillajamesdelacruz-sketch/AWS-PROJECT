@@ -218,6 +218,24 @@ const LogIn = ({ onLogin }) => {
 
             </div>
 
+
+            {success && (
+              <p className="li-success" role="status">
+                {success}
+              </p>
+            )}
+
+            {/* Submit */}
+            <button
+              type="submit"
+              className="li-submit"
+              disabled={loading}
+            >
+              {loading ? "Signing in..." : "Sign in"}
+            </button>
+
+            
+
             <div className="li-divider">
               <span>or</span>
             </div>
@@ -238,23 +256,9 @@ const LogIn = ({ onLogin }) => {
               <p className="li-error" role="alert">
                 {error}
               </p>
+              
+              
             )}
-
-            {success && (
-              <p className="li-success" role="status">
-                {success}
-              </p>
-            )}
-
-            {/* Submit */}
-            <button
-              type="submit"
-              className="li-submit"
-              disabled={loading}
-            >
-              {loading ? "Signing in..." : "Sign in"}
-            </button>
-
             {/* Create Account */}
             <p className="li-new">
               New to PeekyFox?{" "}

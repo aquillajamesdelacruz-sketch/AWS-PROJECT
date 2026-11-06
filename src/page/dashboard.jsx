@@ -4,6 +4,7 @@ import "./dashboard.css";
 import "../styles/Theme.css";
 import logo from "../assets/Logo.png";
 import mascot from "../assets/Mascot.png";
+import peek from "../assets/peek.png";
 import find from "../assets/find.png";
 import stocks from "../assets/stocks.png";
 import sleep from "../assets/sleep.png";
@@ -97,6 +98,15 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
   const [quickUrl, setQuickUrl] = useState("");
   const [collections, setCollections] = useState([]);
   const [focusId, setFocusId] = useState(null);
+  const [logoutOpen, setLogoutOpen] = useState(false);
+
+  // Escape closes the log out confirmation
+  useEffect(() => {
+    if (!logoutOpen) return;
+    const onKey = (e) => e.key === "Escape" && setLogoutOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [logoutOpen]);
 
   const [items, setItems] = useState([]);
   const [purchases, setPurchases] = useState([]);   // added: bought items from Firebase (feeds the savings charts)
@@ -311,6 +321,9 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
 
   // Log out. The route guard redirects the signed-out user to the login page.
   const handleLogout = () => logout().catch(console.error);
+  // Every Log out button asks first, so a slip doesn't sign you out
+  const requestLogout = () => setLogoutOpen(true);
+  const confirmLogout = () => { setLogoutOpen(false); handleLogout(); };
 
   // added: notifications come from the user's real items; the unread count compares them with the saved read time
   const notifications = buildNotifications(items);
@@ -366,13 +379,13 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
         </button>
 
         {/* added: log out button (Firebase signOut) */}
-        <button type="button" className="db-nav db-nav--logout" onClick={handleLogout}>
+        <button type="button" className="db-nav db-nav--logout" onClick={requestLogout}>
           <Icon><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></Icon>
           Log out
         </button>
 
         <div className="db-tip">
-          <img className="db-tip__fox" src={mascot} alt="" />
+          <img className="db-tip__fox" src={peek} alt="" />
           <p>Pixie tip: Set a target price and I will cheer when it drops.</p>
         </div>
         <p className="db-side__foot">A little patience. A better price.</p>
@@ -403,7 +416,7 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
             onSettings={handleSettings}
             items={items}
             onDeleteAccount={handleDeleteAccount}
-            onLogout={handleLogout}
+            onLogout={requestLogout}
           />
         ) : active === "Collection" ? (
           <Collection
@@ -475,6 +488,20 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
             });
           }}
         />
+      )}
+
+      {/* ---------- Log out confirmation ---------- */}
+      {logoutOpen && (
+        <div className="db-overlay db-overlay--top" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && setLogoutOpen(false)}>
+          <div className="db-confirm" role="alertdialog" aria-modal="true" aria-labelledby="db-logout-title" aria-describedby="db-logout-desc">
+            <h2 id="db-logout-title">Log out?</h2>
+            <p id="db-logout-desc">You’ll need to sign in again to see your watchlist.</p>
+            <div className="db-confirm__actions">
+              <button type="button" className="db-confirm__btn" autoFocus onClick={() => setLogoutOpen(false)}>Stay logged in</button>
+              <button type="button" className="db-confirm__btn db-confirm__btn--primary" onClick={confirmLogout}>Log out</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ---------- Onboarding modal ---------- */}

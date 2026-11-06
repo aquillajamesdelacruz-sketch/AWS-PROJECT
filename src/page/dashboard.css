@@ -15,13 +15,18 @@ body { margin: 0; font-family: "Nunito", system-ui, sans-serif; color: var(--ink
   position: relative;
   display: grid;
   grid-template-columns: 236px 1fr;
-  min-height: 100vh;
+  grid-template-rows: minmax(0, 1fr);
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
   background: #fff;
 }
 
 /* ---------- Sidebar ---------- */
 .db-side {
   display: flex; flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
   padding: 24px 20px 20px;
   border-right: 1px solid #f1e9e1;
   background: #fff;
@@ -44,17 +49,21 @@ body { margin: 0; font-family: "Nunito", system-ui, sans-serif; color: var(--ink
 .db-side__group + .db-nav { margin-top: 0; }
 
 .db-tip {
-  position: relative; margin-top: auto; padding: 36px 12px 12px;
+  position: relative; margin-top: auto; padding: 22px 12px 12px;
   border: 1px solid #f3d8bd; border-radius: 12px; background: var(--peach);
   font-size: 11px; line-height: 1.45;
 }
 .db-tip p { margin: 0; }
-.db-tip__fox { position: absolute; left: 6px; top: -34px; width: 56px; height: auto; }
+.db-tip__fox { position: absolute; left: 10px; top: -62px; width: 76px; height: auto; pointer-events: none; }   /* peeking over the box, paw resting on its edge */
 .db-side__foot { margin: 20px 0 0; font-size: 9px; color: var(--muted); }
 
 /* ---------- Main ---------- */
 .db-main {
   min-width: 0;                       /* added: lets the main column shrink on small screens */
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
   display: flex; flex-direction: column;
   padding: 20px 28px;
   background:
@@ -162,9 +171,9 @@ button:focus-visible { outline: 3px solid var(--navy); outline-offset: 2px; }
 .db-empty {
   flex: 1;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  padding: 40px 0 80px; text-align: center;
+  padding: clamp(12px, 4vh, 40px) 0 clamp(16px, 8vh, 80px); text-align: center;
 }
-.db-empty__fox { width: min(100%, 460px); height: auto; margin-bottom: 8px; }
+.db-empty__fox { width: auto; max-width: min(100%, 460px); max-height: 34vh; height: auto; margin-bottom: 8px; }
 .db-empty h2 { margin: 0; font-size: 25px; font-weight: 900; }
 .db-empty p { margin: 14px 0 30px; font-size: 14px; }
 .db-add {
@@ -195,7 +204,7 @@ button:focus-visible { outline: 3px solid var(--navy); outline-offset: 2px; }
 @media (min-width: 861px) { .db-tabbar { display: none; } }   /* wide screens use the sidebar instead */
 
 /* sidebar log out button sits above the Pixie tip */
-.db-nav--logout { margin: 18px 0 44px; color: var(--muted); }   /* 44px keeps Pixie's head from touching it */
+.db-nav--logout { margin: 18px 0 70px; color: var(--muted); }   /* 44px keeps Pixie's head from touching it */
 
 /* unread count on the bell */
 .db-iconbtn { position: relative; }
@@ -208,3 +217,44 @@ button:focus-visible { outline: 3px solid var(--navy); outline-offset: 2px; }
   .db-top__text h1 { font-size: 18px; }
   .db-top__tools { gap: 12px; }
 }
+
+/* ---------- Short windows: tighten the sidebar so every item still fits without scrolling ---------- */
+@media (min-width: 861px) and (max-height: 800px) {
+  .db-side { padding: 18px 16px 14px; }
+  .db-side__logo { margin-bottom: 18px; }
+  .db-nav { padding: 11px 14px; margin-bottom: 5px; }
+  .db-side nav + .db-side__group { margin-top: 12px; }
+  .db-nav--logout { margin: 12px 0 66px; }
+  .db-tip { padding-top: 20px; }
+  .db-side__foot { margin-top: 12px; }
+}
+@media (min-width: 861px) and (max-height: 680px) {
+  .db-side__logo { height: 30px; margin-bottom: 12px; }
+  .db-nav { padding: 8px 12px; margin-bottom: 3px; font-size: 13px; }
+  .db-side nav + .db-side__group { margin-top: 8px; }
+  .db-nav--logout { margin: 8px 0 64px; }
+}
+@media (min-width: 861px) and (max-height: 560px) {
+  .db-tip, .db-side__foot { display: none; }
+  .db-nav--logout { margin-bottom: 0; }
+}
+
+/* ---------- Log out confirmation ---------- */
+.db-overlay--top { z-index: 90; }
+.db-confirm {
+  width: min(100%, 400px); padding: 28px 28px 24px; border-radius: 24px;
+  background: #fff; box-shadow: 0 20px 50px rgba(0, 0, 0, .3); text-align: left;
+}
+.db-confirm h2 { margin: 0; font-size: 24px; font-weight: 900; }
+.db-confirm p { margin: 10px 0 0; font-size: 14px; line-height: 1.5; color: var(--muted); }
+.db-confirm__actions { display: flex; gap: 12px; margin-top: 26px; }
+.db-confirm__btn {
+  flex: 1; height: 46px; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; color: var(--ink);
+  cursor: pointer; font: 800 14px "Nunito", sans-serif; transition: transform .15s, background .15s;
+}
+.db-confirm__btn:hover { transform: translateY(-1px); }
+.db-confirm__btn--primary { border: 0; background: var(--orange); color: #fff; box-shadow: 0 4px 12px rgba(249, 115, 22, .3); }
+.db-confirm__btn--primary:hover { background: #ea6a0a; }
+html[data-theme="dark"] .db-confirm { background: #131c2e; }
+html[data-theme="dark"] .db-confirm__btn:not(.db-confirm__btn--primary) { background: #18223a; border-color: #2a3753; }
+@media (max-width: 480px) { .db-confirm__actions { flex-direction: column-reverse; } }

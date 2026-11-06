@@ -1,15 +1,42 @@
-/* Sign-up reuses the LogIn layout; these tweaks fit the longer form. */
-.su { padding-top: 48px; }
+/* Sign-up reuses the LogIn layout (login.css) and fits the longer form on one screen. */
+.su { padding-top: clamp(12px, 4.5vh, 44px); }
 .su .li-intro { margin-top: 0; }
-.su .li-card { padding-top: 32px; padding-bottom: 40px; }
-.su .li-card__logo { margin-bottom: 18px; }
-.su .li-card__sub { margin: 10px 0 24px; }
-.su .li-input { margin-bottom: 18px; }
-.su .li-row { margin-top: -4px; }
-.su-error { margin: 14px 0 0; }
-.su-submit { margin-top: 22px; }
-.su .li-new { margin-top: 16px; }
 
-@media (max-width: 960px) {
-  .su { padding-top: 32px; }
+/* Both sides sit in the vertical middle of the page (the form card is no longer stuck at the top) */
+.su .li-layout { align-items: center; }
+
+/* Bigger title, subtitle and mascot */
+.su .li-title { font-size: clamp(28px, min(4.1vw, 6.2vh), 56px); }
+.su .li-sub { margin-top: 10px; font-size: clamp(14px, 2.2vh, 20px); }
+.su .li-stage { height: clamp(200px, 62vh, 600px); margin-top: clamp(10px, 3vh, 28px); }
+
+.su .li-card { padding: clamp(12px, 3.2vh, 30px) clamp(24px, 4vw, 64px) clamp(12px, 3.4vh, 32px); }
+.su .li-card__logo { height: clamp(28px, 4.4vh, 40px); margin-bottom: clamp(5px, 1.6vh, 14px); }
+.su .li-card__title { font-size: clamp(19px, 3vh, 27px); }
+.su .li-card__sub { margin: clamp(3px, .9vh, 8px) 0 clamp(8px, 2.4vh, 20px); }
+
+/* Two columns: Email on its own row, Name | Contact, then Password | Confirm.
+   (children order: 1-2 email, 3-4 name, 5-6 contact, 7-8 password, 9-10 confirm) */
+.su .li-form { display: grid; grid-template-columns: 1fr 1fr; column-gap: 16px; }
+.su .li-form > * { grid-column: 1 / -1; }
+.su .li-form > :nth-child(3)  { grid-column: 1; grid-row: 3; }
+.su .li-form > :nth-child(5)  { grid-column: 2; grid-row: 3; }
+.su .li-form > :nth-child(4)  { grid-column: 1; grid-row: 4; }
+.su .li-form > :nth-child(6)  { grid-column: 2; grid-row: 4; }
+.su .li-form > :nth-child(7)  { grid-column: 1; grid-row: 5; }
+.su .li-form > :nth-child(9)  { grid-column: 2; grid-row: 5; }
+.su .li-form > :nth-child(8)  { grid-column: 1; grid-row: 6; }
+.su .li-form > :nth-child(10) { grid-column: 2; grid-row: 6; }
+
+.su .li-label { margin-bottom: clamp(3px, .8vh, 8px); }
+.su .li-input { height: clamp(30px, 4.5vh, 42px); margin-bottom: clamp(7px, 2vh, 18px); }
+.su .li-row { margin-top: 0; }
+.su .li-show { margin-top: clamp(0px, .4vh, 4px); }
+.su-error { margin: clamp(6px, 1.4vh, 12px) 0 0; }
+.su-submit { margin-top: clamp(8px, 2.2vh, 20px); }
+.su .li-new { margin-top: clamp(6px, 1.5vh, 14px); }
+
+/* Phones: one field per row (the page then scrolls, see login.css) */
+@media (max-width: 560px) {
+  .su .li-form { display: block; }
 }
