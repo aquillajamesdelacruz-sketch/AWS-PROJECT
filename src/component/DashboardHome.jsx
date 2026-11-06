@@ -64,7 +64,7 @@ export function Notifications({ notifications = [], readAt = 0, enabled = true, 
   );
 }
 
-export default function DashboardHome({ items = [], purchases = [], collections = [], onQuickAdd, onViewItem }) {
+export default function DashboardHome({ items = [], purchases = [], collections = [], onQuickAdd, onViewItem, onViewAll }) {
   const [url, setUrl] = useState("");
 
   const stores = storeBreakdown(items);                       // "Current Stores" dots
@@ -74,6 +74,15 @@ export default function DashboardHome({ items = [], purchases = [], collections 
   const savedPct = savedPercent(items, purchases);            // badge next to the amount
   const trend = savingsTrend(items, purchases, 7);            // last 7 days, running total
   const chart = trendPath(trend);                             // SVG path for the trend
+
+  // "View All" → open the matching page. Uses onViewAll from the parent when it is passed;
+  // otherwise it clicks the sidebar / tab-bar button with that page's name, so it works either way.
+  const goTo = (page) => {
+    if (onViewAll) return onViewAll(page);
+    const label = page === "collections" ? "Collection" : "Watchlist";
+    const btn = [...document.querySelectorAll(".db-nav, .db-tabbar button")].find((b) => b.textContent.trim() === label);
+    btn?.click();
+  };
 
   const quickAdd = (e) => {
     e.preventDefault();
@@ -148,7 +157,7 @@ export default function DashboardHome({ items = [], purchases = [], collections 
 
       <section className="dh-bottom">
         <article className="dh-card dh-list">
-          <header><h2>Collections</h2><a href="#collections">View All →</a></header>
+          <header><h2>Collections</h2><button type="button" className="dh-link" onClick={() => goTo("collections")}>View All →</button></header>
           {collections.length === 0 && <p className="dh-none">No collections yet.</p>}
           {collections.map((c) => (
             <div className="dh-coll" key={c.id || c.name}>
@@ -159,7 +168,7 @@ export default function DashboardHome({ items = [], purchases = [], collections 
         </article>
 
         <article className="dh-card dh-list">
-          <header><h2>Price Watchlist</h2><a href="#watchlist">View All →</a></header>
+          <header><h2>Price Watchlist</h2><button type="button" className="dh-link" onClick={() => goTo("watchlist")}>View All →</button></header>
           {watched.map((w) => (
             <div className="dh-watch" key={w.id}>
               <Thumb image={w.image} alt="" />
