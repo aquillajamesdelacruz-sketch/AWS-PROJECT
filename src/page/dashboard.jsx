@@ -1,3 +1,4 @@
+import { sendPriceDropEmail, emailAlertsConfigured } from "../lib/priceAlert.js";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "./dashboard.css";
@@ -229,7 +230,28 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
       }
 
       await updateItem(user.uid, id, updatedData);
-  
+
+      // added: email alert when the price DROPPED (only if the user switched "Email alerts" on in Settings).
+      // A failed email must never make saving the item fail, so errors are only logged.
+      const dropped = old && Number(updatedData.price) > 0 && Number(updatedData.price) < Number(old.price);
+      if (dropped) {
+        if (!settings.emailAlerts) {
+          console.info("[price alert] skipped: turn on 'Email alerts' in Settings first.");
+        } else if (!emailAlertsConfigured()) {
+          console.warn("[price alert] skipped: VITE_EMAILJS_* values are missing in .env (restart npm run dev after adding them).");
+        } else {
+          sendPriceDropEmail({
+            to: settings.email || user.email,
+            item: { ...old, ...updatedData },
+            oldPrice: Number(old.price),
+            newPrice: Number(updatedData.price),
+          })
+            .then(() => console.info("[price alert] email sent to", settings.email || user.email))
+            .catch((error) => console.warn("[price alert] email not sent:", error.message));
+        }
+      } else if (old) {
+        console.info("[price alert] no email: the new price is not lower than the old one.");
+      }
       };
   
       // deleteItem
