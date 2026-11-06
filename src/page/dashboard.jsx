@@ -6,6 +6,7 @@ import { celebrate } from "../lib/celebrate.js";
 import { sendPriceDropEmail, emailAlertsConfigured } from "../lib/priceAlert.js";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { Settings as SettingsIcon } from "lucide-react";
 import logo from "../assets/Logo.png";
 import mascot from "../assets/Mascot.png";
 import peek from "../assets/peek.png";
@@ -13,7 +14,7 @@ import find from "../assets/find.png";
 import stocks from "../assets/stocks.png";
 import sleep from "../assets/sleep.png";
 import AddItemModal from "../component/AddItemModal.jsx";
-import { validateWatchlistCount, validateNotificationPatch, NOTIFICATION_KEYS, MESSAGES, DEFAULT_STOCK_THRESHOLD } from "../lib/validation/schemas.js";
+import { validateWatchlistCount, validateNotificationPatch, NOTIFICATION_KEYS, MESSAGES, DEFAULT_STOCK_THRESHOLD, MAX_WATCHLIST_ITEMS } from "../lib/validation/schemas.js";
 import Watchlist from "../component/Watchlist.jsx";
 import Collection from "../component/Collection.jsx";
 import BoughtSavings from "../component/BoughtSavings.jsx";
@@ -36,7 +37,6 @@ const Icon = ({ children }) => (
     {children}
   </svg>
 );
-
 const NAV = [
   { label: "Dashboard", icon: <><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></> },
   { label: "Watchlist", icon: <><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></> },
@@ -210,7 +210,7 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
         return;
       }
 
-      // watchlist limit: item 51 is rejected (the modal shows this message)
+      // Reject additions once the watchlist reaches its item limit.
       const limitError = validateWatchlistCount(items.length);
       if (limitError) throw new Error(limitError);
   
@@ -358,11 +358,18 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
     }
   };
 
-  // Log out. The route guard redirects the signed-out user to the login page.
-  const handleLogout = () => logout().catch(console.error);
+  // Return signed-out users to the public landing page rather than the login screen.
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate("/", { replace: true });
+    } catch (error) {
+      console.error("Could not log out:", error);
+    }
+  };
   // Every Log out button asks first, so a slip doesn't sign you out
   const requestLogout = () => setLogoutOpen(true);
-  const confirmLogout = () => { setLogoutOpen(false); handleLogout(); };
+  const confirmLogout = () => { setLogoutOpen(false); void handleLogout(); };
 
   // added: notifications come from the user's real items; the unread count compares them with the saved read time
   const notifications = buildNotifications(items);
@@ -372,9 +379,11 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
   const tools = (
       <div className="db-top__tools">
         {/* changed: the search button now opens the Watchlist, which has the search box */}
-        <button type="button" className="db-iconbtn" aria-label="Search" onClick={() => setActive("Watchlist")}>
-          <Icon><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></Icon>
-        </button>
+        {active === "Dashboard" && (
+          <button type="button" className="db-iconbtn" aria-label="Search" onClick={() => setActive("Watchlist")}>
+            <Icon><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></Icon>
+          </button>
+        )}
         <button type="button" className="db-iconbtn" aria-label="Notifications" aria-expanded={notifOpen} onClick={() => setNotifOpen(!notifOpen)}>
           <Icon><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></Icon>
           {unread > 0 && <span className="db-badge" aria-label={`${unread} unread`}>{unread > 9 ? "9+" : unread}</span>}
@@ -390,7 +399,7 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
           />
         )}
         <button type="button" className="db-avatar" aria-label="Profile menu" aria-expanded={profileOpen} onClick={()=>{setProfileOpen(!profileOpen);setNotifOpen(false);}}>{initials}</button>
-        {profileOpen && <Popover label="Your profile" onClose={()=>setProfileOpen(false)}><strong>{userName}</strong><small>{settings.email}</small><button type="button" onClick={()=>{setProfileOpen(false);setActive("Settings");}}>Settings</button><button type="button" onClick={()=>{setProfileOpen(false);requestLogout();}}>Log out</button></Popover>}
+        {profileOpen && <Popover label="Your profile" onClose={()=>setProfileOpen(false)}><strong>{userName}</strong><small>{settings.email}</small><button type="button" className="pf-menu-action" onClick={()=>{setProfileOpen(false);setActive("Settings");}}><SettingsIcon size={20} strokeWidth={1.8} aria-hidden="true" />Settings</button><button type="button" className="pf-menu-action pf-menu-action--danger" onClick={()=>{setProfileOpen(false);requestLogout();}}><Icon><path d="M10 17l5-5-5-5M15 12H3"/><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/></Icon>Log out</button></Popover>}
       </div>
   );
 
@@ -422,7 +431,7 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
       </aside>
 
       {/* ---------- Main ---------- */}
-      <main className="db-main" id="main-content" tabIndex={-1}>
+      <main className={`db-main${["Watchlist", "Collection", "Bought and Savings"].includes(active) ? " db-main--aligned-title" : ""}${active === "Watchlist" ? " db-main--watchlist" : ""}`} id="main-content" tabIndex={-1}>
         <div className="db-route" key={active}>
         {active !== "Dashboard" && <div className="db-utility-header">{tools}</div>}
         {active === "Watchlist" ? (
@@ -454,6 +463,7 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
           <Collection
             items={items}
             collections={collections}
+            watchlistFull={items.length >= MAX_WATCHLIST_ITEMS}
             onAddItem={() => openAdd()}
             onCreate={handleCreateCollection}
             onRename={handleRenameCollection}

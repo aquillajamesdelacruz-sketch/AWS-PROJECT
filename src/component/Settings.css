@@ -9,6 +9,7 @@
 
 .st-btn { height: clamp(40px, 5vh, 52px); padding: 0 32px; border: 1px solid #eef0f3; border-radius: 10px; background: #fff; color: #0f172a; cursor: pointer; font: 700 15px "Nunito", sans-serif; transition: border-color .15s, transform .15s; }
 .st-btn:hover { border-color: #fbc9a0; transform: translateY(-1px); }
+.st-profile-name__edit, .st-profile-name__edit:hover { border-color: transparent; background: transparent; }
 .st-btn--wide { min-width: 226px; }
 .st-btn--red { min-width: 184px; color: var(--danger); }
 

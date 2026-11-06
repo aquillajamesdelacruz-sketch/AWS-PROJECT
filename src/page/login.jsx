@@ -62,6 +62,10 @@ const LogIn = ({ onLogin }) => {
     setError("");
     setSuccess("");
 
+    if (!form.email.trim() && !form.password) {
+      return setError(MESSAGES.auth.loginRequired);
+    }
+
     const problem = validateLogin(form);
     if (problem) return setError(problem);
 
@@ -242,13 +246,9 @@ const LogIn = ({ onLogin }) => {
             </button>
 
             {/* Error Message */}
-            {error && (
-              <p className="li-error" role="alert">
-                {error}
-              </p>
-              
-              
-            )}
+            <div className="li-error-slot" aria-live="assertive">
+              {error && <p className="li-error" role="alert">{error}</p>}
+            </div>
             {/* Create Account */}
             <p className="li-new">
               New to PeekyFox?{" "}

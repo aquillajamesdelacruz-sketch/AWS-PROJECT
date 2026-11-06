@@ -66,7 +66,7 @@ function CreateCollection({ existing, onClose, onCreate }) {
 }
 
 /* ---------- detail ---------- */
-function Detail({ collection, items, allItems, collectionNames, onBack, onViewItem, onAddItem, onRename, onDelete, onAddMembers }) {
+function Detail({ collection, items, allItems, collectionNames, watchlistFull, onBack, onViewItem, onAddItem, onRename, onDelete, onAddMembers }) {
   const [manage,setManage]=useState(false);
   const [picker,setPicker]=useState(false);
   const [name,setName]=useState(collection.name);
@@ -104,7 +104,7 @@ function Detail({ collection, items, allItems, collectionNames, onBack, onViewIt
           ) : (
             <>
               <h2>Nothing in {collection.name} yet.</h2>
-              <p>Add an item and choose this collection to start tracking it.</p>
+              <p>{watchlistFull ? "Your watchlist is full. Remove an item before adding another." : "Add an item and choose this collection to start tracking it."}</p>
             </>
           )}
         </div>
@@ -123,7 +123,7 @@ function Detail({ collection, items, allItems, collectionNames, onBack, onViewIt
           )}
         </>
       ) : (
-        <div className="cl-none"><button type="button" className="wl-btn wl-btn--primary" onClick={onAddItem}>+ Add an item</button></div>
+        <div className="cl-none"><button type="button" className="wl-btn wl-btn--primary" onClick={onAddItem} disabled={watchlistFull}>+ Add an item</button></div>
       )}
       {manage && <Modal onClose={()=>setManage(false)} className="wl-modal--md"><h2>Edit collection</h2><label className="wl-label" htmlFor="collection-rename">Collection name</label><input id="collection-rename" className="wl-input" value={name} maxLength={40} onChange={e=>setName(e.target.value)} />{error && <p role="alert" className="cl-error">{error}</p>}<div className="wl-actions"><button className="wl-btn wl-btn--ghost" onClick={()=>setManage(false)}>Cancel</button><button className="wl-btn wl-btn--danger" onClick={()=>{setManage(false);setDeleting(true);}}>Delete collection</button><button className="wl-btn wl-btn--primary" disabled={busy || !name.trim()} onClick={()=>perform(async()=>{if(collectionNames.some(n=>n!==collection.name && n.toLowerCase()===name.trim().toLowerCase())) throw new Error("A collection already uses this name.");await onRename(collection,name.trim());setManage(false);})}>Save name</button></div></Modal>}
       {deleting && <Modal onClose={()=>setDeleting(false)} className="wl-modal--sm"><h2>Delete {collection.name}?</h2><p>Items stay in your watchlist and other collections.</p>{error && <p role="alert">{error}</p>}<div className="wl-actions"><button className="wl-btn" onClick={()=>setDeleting(false)}>Cancel</button><button className="wl-btn wl-btn--danger" disabled={busy} onClick={()=>perform(async()=>{await onDelete([collection.id]);onBack();})}>Delete collection</button></div></Modal>}
@@ -133,7 +133,7 @@ function Detail({ collection, items, allItems, collectionNames, onBack, onViewIt
 }
 
 /* ---------- page ---------- */
-export default function Collection({ items, collections, onCreate, onDelete, onViewItem, onAddItem, onRename, onAddMembers }) {
+export default function Collection({ items, collections, watchlistFull = false, onCreate, onDelete, onViewItem, onAddItem, onRename, onAddMembers }) {
   const [openId, setOpenId] = useState(null);
   const [view, setView] = useState("list");
   const [query, setQuery] = useState("");
@@ -152,7 +152,7 @@ export default function Collection({ items, collections, onCreate, onDelete, onV
   const toggleEdit = () => { setEdit(!edit); setSelected([]); };
 
   if (open) {
-    return <Detail collection={open} items={open.items} allItems={items} collectionNames={collections.map(c=>c.name)} onRename={onRename} onDelete={onDelete} onAddMembers={onAddMembers} onBack={() => setOpenId(null)} onViewItem={onViewItem} onAddItem={onAddItem} />;
+    return <Detail collection={open} items={open.items} allItems={items} collectionNames={collections.map(c=>c.name)} watchlistFull={watchlistFull} onRename={onRename} onDelete={onDelete} onAddMembers={onAddMembers} onBack={() => setOpenId(null)} onViewItem={onViewItem} onAddItem={onAddItem} />;
   }
 
   return (

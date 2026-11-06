@@ -5,6 +5,7 @@
 /* ---------- Top bar ---------- */
 .wl-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .wl-top h1 { margin-right: auto; font-size: 34px; font-weight: 900; }
+.wl > .wl-count { margin-top: 8px; padding-top: 4px; color: var(--mut); font-size: 14px; font-weight: 700; }
 .wl-search, .wl-tool {
   display: flex; align-items: center; gap: 8px; height: 52px; padding: 0 16px;
   border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; color: var(--mut);
@@ -108,7 +109,7 @@
 .wl-modal--sm .wl-actions { margin-top: 48px; padding-top: 0; }
 .wl-modal--sm .wl-actions .wl-btn { flex: 1; }
 .wl-modal--md { width: min(100%, 962px); }
-.wl-modal--lg { width: min(100%, 962px); padding: 40px 48px 32px; overflow: visible; }
+.wl-modal--lg { width: min(100%, 962px); padding: 32px 40px 24px; overflow: visible; }
 .wl-modal__head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
 .wl-x { width: 42px; height: 52px; border: 1px solid #eadfd3; border-radius: 12px; background: #fff; cursor: pointer; font-size: 16px; }
 .wl-x--abs { position: absolute; top: 18px; right: 34px; height: 54px; }
@@ -127,12 +128,12 @@
 .wl-tabs { display: grid; grid-template-columns: 1fr 1fr; margin: 0 80px 0 0; }
 .wl-tabs button { padding: 0 0 12px; border: 0; border-bottom: 3px solid transparent; background: none; cursor: pointer; font: 600 21px "Nunito", sans-serif; color: var(--muted); margin: 0 48px; }
 .wl-tabs button.is-on { border-color: var(--orange-deep); color: var(--orange-deep); }
-.wl-detail { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 32px; margin-top: 32px; padding: 0 24px; }
-.wl-detail__img { height: 300px; border-radius: 16px; }
+.wl-detail { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 24px; margin-top: 20px; padding: 0 12px; }
+.wl-detail__img { height: 260px; border-radius: 16px; }
 .wl-detail__info h2 { font-size: 28px; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .wl-shop { display: inline-flex; align-items: center; gap: 4px; margin-top: 8px; color: var(--orange-deep); font-size: 13px; font-weight: 600; }
 .wl-shop b { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 4px; background: var(--o); color: #fff; font-size: 12px; }
-.wl-detail__info > s { display: block; margin-top: 16px; color: var(--muted); font-size: 17px; }
+.wl-detail__info > s { display: block; margin-top: 8px; color: var(--muted); font-size: 17px; }
 .wl-pricerow { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
 .wl-pricerow strong { min-width: 0; font-size: 32px; font-weight: 800; line-height: 1.1; overflow-wrap: anywhere; }
 .wl-pill { padding: 4px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; }
@@ -142,7 +143,7 @@
 .wl-chip b { color: var(--ink); }
 .wl-orange { color: var(--orange-deep); font-size: 14px; font-weight: 700; }
 .wl-ends { display: flex; justify-content: space-between; margin-top: 8px; color: var(--muted); font-size: 14px; }
-.wl-alert { display: flex; align-items: center; gap: 16px; margin-top: 16px; padding: 8px 16px 8px 12px; border: 1px solid #e5e7eb; border-radius: 4px; }
+.wl-alert { display: flex; align-items: center; gap: 16px; margin-top: 10px; padding: 8px 16px 8px 12px; border: 1px solid #e5e7eb; border-radius: 4px; }
 .wl-alert > div { flex: 1; font-size: 14px; }
 .wl-alert b { display: block; color: var(--orange-deep); font-size: 17px; font-weight: 800; }
 .wl-alert > span { font-size: 14px; font-weight: 700; }
@@ -150,9 +151,9 @@
 .wl-switch i { position: absolute; top: 4px; left: 4px; width: 24px; height: 24px; border-radius: 50%; background: #fff; transition: transform .2s; }
 .wl-switch.is-on { background: var(--o); }
 .wl-switch.is-on i { transform: translateX(24px); }
-.wl-detail__foot { margin: 24px 0 0; padding: 0 24px 0 0; }
+.wl-detail__foot { margin: 16px 0 0; padding: 0 12px 0 0; }
 .wl-detail__foot.has-tip { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
-.wl-detail__foot.has-tip .wl-actions { margin-top: 0; }
+.wl-detail__foot.has-tip .wl-actions { margin-top: 20px; }
 .wl-detail__foot .wl-actions { margin-top: 0; }
 
 /* Price history */
@@ -184,7 +185,7 @@
   .wl-row small { font-size: 13px; }
   .wl-row .wl-btn { width: 100%; justify-self: stretch; }
   .wl-detail { grid-template-columns: minmax(0, 1fr); padding: 0; }   /* minmax(0) = the modal can no longer be stretched wider than the screen */
-  .wl-detail__img { height: 240px; }
+  .wl-detail__img { height: 220px; }
   .wl-detail__info h2 { font-size: 24px; }
   .wl-modal--lg { padding: 24px 16px 24px; }
   .wl-tabs { margin: 0; }
@@ -204,13 +205,13 @@
 .wl-actions { flex-wrap: wrap; }
 @media (max-width: 600px) {
   .wl-overlay { padding: 12px; place-items: start center; overflow-y: auto; }
-  .wl-modal, .wl-modal--lg, .wl-modal--md, .wl-modal--sm { padding: 24px 16px 16px; border-radius: 20px; }
+  .wl-modal, .wl-modal--lg, .wl-modal--md, .wl-modal--sm { padding: 20px 16px 16px; border-radius: 20px; }
   .wl-modal h2 { font-size: 23px; }
   .wl-peek { display: none; }                      /* the fox would be cut off above the screen */
   .wl-tabs { margin: 0 48px 0 0; }
   .wl-tabs button { margin: 0 4px; font-size: 15px; }
   .wl-x--abs { top: 10px; right: 10px; height: 44px; }
-  .wl-detail { margin-top: 24px; gap: 16px; }
+  .wl-detail { margin-top: 16px; gap: 12px; }
   .wl-detail__info h2 { font-size: 22px; }
   .wl-detail__foot { padding: 0; }
   .wl-detail__foot .wl-actions .wl-btn, .wl-actions--end .wl-btn { flex: 1 1 100%; }

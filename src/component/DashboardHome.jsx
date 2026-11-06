@@ -1,5 +1,4 @@
 import { productImage } from "../lib/media.js";
-import { CloseIcon } from "./Icons.jsx";
 import Popover from "./Popover.jsx";
 import { useState } from "react";
 import { storeBreakdown, biggestDrop, topWatched, dropPercent, totalSaved, savedPercent, savingsTrend, trendPath, timeAgo } from "../lib/Dashboardstats.js";
@@ -30,7 +29,6 @@ export function Notifications({ notifications = [], readAt = 0, enabled = true, 
     <Popover className="dh-notif" onClose={onClose} label="Notifications">
       <div className="dh-notif__head">
         <h2 id="notifications-title">Notifications</h2>
-        <button type="button" onClick={onClose} aria-label="Close notifications" className="wl-x"><CloseIcon /></button>
         <button type="button" onClick={onMarkRead} disabled={!notifications.length}>Mark all as read</button>
       </div>
       {!enabled ? (

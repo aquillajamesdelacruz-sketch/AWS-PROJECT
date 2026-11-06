@@ -179,8 +179,9 @@ button:focus-visible, a:focus-visible {
 .li-footer a:hover { text-decoration: underline; }
 
 /* ---------- Messages ---------- */
+.li-error-slot { min-height: 52px; margin: -4px 0 12px; }
 .li-error {
-  margin: -4px 0 12px; padding: 8px 12px; border-radius: 8px;
+  margin: 0; padding: 8px 12px; border-radius: 8px;
   background: #fff1ee; color: #b91c1c; font-size: 12px; font-weight: 700; line-height: 1.4;
 }
 .li-success {

@@ -3,7 +3,7 @@ import { MESSAGES } from "./schemas.js";
 // Maps Firebase Auth error codes to the messages shown to the user.
 const LOGIN_ERRORS = {
   "auth/invalid-credential": "Invalid email or password.",
-  "auth/wrong-password": "Invalid email or password.",
+  "auth/wrong-password": "Incorrect password.",
   "auth/user-not-found": "Invalid email or password.",
   "auth/invalid-email": MESSAGES.auth.emailInvalid,
   "auth/missing-password": MESSAGES.auth.passwordRequired,

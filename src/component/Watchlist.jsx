@@ -9,7 +9,7 @@ import mascot from "../assets/Mascot.png";
 import find from "../assets/find.png";
 import sleep from "../assets/sleep.png";
 import { timeAgo } from "../lib/Dashboardstats.js";
-import { validateSearchQuery, CATEGORIES, DEFAULT_CATEGORY } from "../lib/validation/schemas.js";
+import { validateSearchQuery, CATEGORIES, DEFAULT_CATEGORY, MAX_WATCHLIST_ITEMS } from "../lib/validation/schemas.js";
 
 /* ---------- helpers ---------- */
 const parse = (v) => Number(String(v).replace(/[^0-9.]/g, "")) || 0;
@@ -232,7 +232,7 @@ export function ProductModal({ item, onClose, onEdit, onDelete, onUpdate, onBoug
 }
 
 /* ---------- views ---------- */
-export function CardView({ items, edit, selected, toggle, open, actionLabel = "View Product", onDelete }) {
+export function CardView({ items, edit, selected, toggle, open, actionLabel = "View Product" }) {
   return (
     <div className="wl-cards">
       {items.map((it) => (
@@ -250,7 +250,7 @@ export function CardView({ items, edit, selected, toggle, open, actionLabel = "V
               <img src={mascot} alt="" />
               <p>{it.price <= it.target ? "Target reached. Check the store before buying." : Number(it.history?.at(-1)?.price) > Number(it.history?.at(-2)?.price) ? "The price increased. Keep watching for a better moment." : it.price < it.original ? "The price is down. Your target alert will keep watch." : "Set a target and watch for a better price."}</p>
             </div>
-            {!edit && <><button type="button" className="wl-btn wl-btn--primary wl-btn--full" onClick={() => open(it.id)}>{actionLabel}</button>{onDelete && <button className="wl-btn wl-btn--danger wl-btn--full" onClick={()=>onDelete(it.id)}>Delete item</button>}</>}
+            {!edit && <button type="button" className="wl-btn wl-btn--primary wl-btn--full" onClick={() => open(it.id)}>{actionLabel}</button>}
           </div>
         </article>
       ))}
@@ -313,6 +313,7 @@ export default function Watchlist({ items, collections = [], openId, onOpened, o
   }, [items, query, searchError, category, sort]);
 
   const detail = items.find((i) => i.id === detailId);
+  const watchlistFull = items.length >= MAX_WATCHLIST_ITEMS;
   const editing = items.find((i) => i.id === editingId);
   const toggle = (id) => setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
   const allSelected = shown.length > 0 && shown.every((i) => selected.includes(i.id));
@@ -335,7 +336,7 @@ export default function Watchlist({ items, collections = [], openId, onOpened, o
           <option value="All">All categories</option>
           {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
-        <button type="button" className="wl-tool" onClick={onAdd}><PlusI />Add item</button>
+        <button type="button" className="wl-tool" onClick={onAdd} disabled={watchlistFull} title={watchlistFull ? "Watchlist is full. Remove an item to add another." : undefined}><PlusI />Add item</button>
         <button type="button" className={`wl-tool${edit ? " is-on" : ""}`} onClick={toggleEdit} aria-pressed={edit} disabled={!items.length}><PencilI />Edit watchlist</button>
         <div className="wl-toggle" role="group" aria-label="View">
           <button type="button" aria-label="Card view" aria-pressed={view === "card"} className={view === "card" ? "is-on" : ""} onClick={() => setView("card")}><GridI /></button>
@@ -343,7 +344,9 @@ export default function Watchlist({ items, collections = [], openId, onOpened, o
         </div>
       </header>
 
+      <p className="wl-count" aria-label={`${items.length} of ${MAX_WATCHLIST_ITEMS} items`}>{items.length}/{MAX_WATCHLIST_ITEMS}</p>
       {searchError && <p className="wl-search-error" role="alert">{searchError}</p>}
+      {watchlistFull && <p className="wl-search-error" role="status">Watchlist is full ({items.length}/{MAX_WATCHLIST_ITEMS}). Remove an item to add another.</p>}
 
       {edit && (
         <div className="wl-editbar">
@@ -363,7 +366,7 @@ export default function Watchlist({ items, collections = [], openId, onOpened, o
       ) : !shown.length ? (
         <section className="wl-empty wl-empty--sm"><h2>No matches.</h2><p>{searchError || query.trim() ? "Nothing in your watchlist matches your search" : "Nothing in this category yet"}{category !== "All" ? ` in ${category}` : ""}.</p></section>
       ) : view === "card" ? (
-        <CardView items={shown} edit={edit} selected={selected} toggle={toggle} open={setDetailId} onDelete={id=>setConfirm([id])} />
+        <CardView items={shown} edit={edit} selected={selected} toggle={toggle} open={setDetailId} />
       ) : (
         <ListView items={shown} edit={edit} selected={selected} toggle={toggle} open={setDetailId} sort={sort} setSort={setSort} />
       )}
