@@ -1,3 +1,4 @@
+import { memberships } from "../src/lib/memberships.js";
 // Dev-server-only component fixture. Not a production entry or authentication bypass.
 import { StrictMode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -38,21 +39,24 @@ const initialItems = [{ id:'one', name:'Wireless headphones for everyday listeni
 export function Fixture() {
   const [items, setItems] = useState(initialItems);
   const [open, setOpen] = useState(false);
+  const [focused,setFocused]=useState(null);
   const [settings, setSettings] = useState({ email:'test@example.com', inApp:true, emailAlerts:false, frequency:'instant', theme:params.get('theme') || 'light', stockThreshold:5 });
   const [name, setName] = useState('Alex');
-  const [collections, setCollections] = useState([{ id:'collection', name:'Next upgrade', color:'#c2410c' }]);
+  const [collections, setCollections] = useState([{ id:'collection', name:'Next upgrade', color:'#c2410c' },{ id:'travel', name:'Travel', color:'#1e3a8a' }]);
+  const [purchases,setPurchases]=useState([{id:'bought',name:initialItems[0].name,paid:2400,original:3200,saved:800,store:'Shopee',boughtAt:fixtureTime,sourceItem:initialItems[0]}]);
+  if(focused) return <Watchlist items={items} openId={focused} onOpened={()=>{}} onUpdate={async()=>{}} onDelete={async()=>{}} onAdd={()=>{}} />;
   if (scene === 'landing') return <Landing />;
   if (scene === 'login') return <Login />;
   if (scene === 'register') return <Register />;
-  if (scene === 'dashboard') return <Dashboard userName="Alex" />;
+  if (scene === 'dashboard') return <Dashboard userName="Alex" previewOnboarding />;
   return <main className="db-main" style={{ minHeight:'100dvh' }}>
     {scene === 'watchlist' && <Watchlist items={items} collections={['Next upgrade']} onAdd={() => setOpen(true)} onUpdate={async (item) => setItems([item])} onDelete={async () => setItems([])} onBought={async () => setItems([])} />}
-    {scene === 'collection' && <Collection items={items} collections={collections} onCreate={async (item) => setCollections([...collections,{...item,id:'new'}])} onDelete={async () => setCollections([])} onAddItem={() => setOpen(true)} onViewItem={() => {}} />}
-    {scene === 'savings' && <BoughtSavings purchases={[{ id:'bought',name:initialItems[0].name,paid:2400,saved:800,store:'Shopee',boughtAt:fixtureTime }]} />}
+    {scene === 'collection' && <Collection items={items} collections={collections} onCreate={async (item) => setCollections([...collections,{...item,id:'new'}])} onRename={async (collection,name)=>{setCollections(cs=>cs.map(c=>c.id===collection.id?{...c,name}:c));setItems(xs=>xs.map(i=>({...i,collection:i.collection===collection.name?name:i.collection,collections:memberships(i).map(n=>n===collection.name?name:n)})));}} onAddMembers={async (name,selected)=>setItems(xs=>xs.map(i=>selected.some(s=>s.id===i.id)?{...i,collections:[...memberships(i),name]}:i))} onDelete={async ids => setCollections(cs=>cs.filter(c=>!ids.includes(c.id)))} onAddItem={() => setOpen(true)} onViewItem={() => {}} />}
+    {scene === 'savings' && <BoughtSavings purchases={purchases} onUndo={async p=>setPurchases(ps=>ps.filter(x=>x.id!==p.id))} />}
     {scene === 'home' && <><h1>Dashboard</h1><DashboardHome items={items} purchases={[]} collections={[]} onQuickAdd={() => setOpen(true)} onViewItem={() => {}} onViewAll={() => {}} /></>}
     {scene === 'settings' && <Settings userName={name} onNameChange={setName} settings={settings} onSettings={async (patch) => { setSettings({...settings,...patch}); document.documentElement.dataset.theme = patch.theme || settings.theme; return ''; }} items={items} onDeleteAccount={async () => ''} />}
     {scene === 'dialog' && <><h1>Dialog verification</h1><button onClick={() => setOpen(true)}>Open dialog</button>{open && <Dialog onClose={() => setOpen(false)}><h2>Account confirmation</h2><button onClick={() => setOpen(false)}>Cancel</button><button>Confirm</button></Dialog>}</>}
-    {scene === 'notifications' && <><h1>Notification verification</h1><button onClick={() => setOpen(true)}>Open notifications</button>{open && <Notifications notifications={[{id:'n',text:'Your tracked price has changed.',at:fixtureTime,color:'#c2410c'}]} onClose={() => setOpen(false)} onMarkRead={() => {}} />}</>}
+    {scene === 'notifications' && <><h1>Notification verification</h1><button onClick={() => setOpen(true)}>Open notifications</button>{open && <Notifications notifications={[{id:'n',itemId:'one',text:'Your tracked price has changed.',at:fixtureTime,color:'#c2410c'}]} onViewItem={id=>setFocused(id)} onClose={() => setOpen(false)} onMarkRead={() => {}} />}</>}
     {open && !['dialog','notifications'].includes(scene) && <AddItemModal collections={['Next upgrade']} onClose={() => setOpen(false)} onSave={async () => {}} />}
   </main>;
 }

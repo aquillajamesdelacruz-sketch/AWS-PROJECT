@@ -1,3 +1,6 @@
+import PlatformLogo from "./PlatformLogo.jsx";
+import { productImage } from "../lib/media.js";
+import { memberships } from "../lib/memberships.js";
 import { CloseIcon } from "./Icons.jsx";
 import Dialog from "./Dialog.jsx";
 import { celebrate } from "../lib/celebrate.js";
@@ -45,7 +48,7 @@ const SortI = () => <I size={20}><path d="M8 9l4-4 4 4M8 15l4 4 4-4" /></I>;
 
 function Thumb({ item, className = "" }) {
   return item.image
-    ? <img className={`wl-img ${className}`} src={item.image} alt={item.name} />
+    ? <img className={`wl-img ${className}`} src={productImage(item.image)} alt={item.name} loading="lazy" decoding="async" />
     : <span className={`wl-img wl-img--empty ${className}`} role="img" aria-label="No product photo"><I size={32}><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="9" cy="9" r="2" /><path d="M21 15l-5-5L5 21" /></I></span>;
 }
 
@@ -64,13 +67,15 @@ function ProgressBar({ item }) {
 
 /* ---------- confirm delete ---------- */
 function ConfirmDelete({ onCancel, onConfirm }) {
+  const [busy,setBusy]=useState(false);
+  const [error,setError]=useState("");
   return (
     <Modal onClose={onCancel} className="wl-modal--sm">
-      <h2>Are you sure you want to delete?</h2>
+      <h2>Are you sure you want to delete?</h2>{error && <p role="alert" className="ai-error">{error}</p>}
       <p className="wl-muted">You’ll have to add them again.</p>
       <div className="wl-actions">
         <button type="button" className="wl-btn wl-btn--ghost" onClick={onCancel}>Cancel</button>
-        <button type="button" className="wl-btn wl-btn--danger" onClick={onConfirm}>Delete</button>
+        <button type="button" className="wl-btn wl-btn--danger" disabled={busy} onClick={async()=>{setBusy(true);setError("");try{await onConfirm();}catch{setError("Could not delete the items. Please try again.");setBusy(false);}}}>{busy?"Deleting...":"Delete"}</button>
       </div>
     </Modal>
   );
@@ -109,14 +114,16 @@ function UpdateItem({ item, collections, onClose, onSave }) {
       <div className="wl-actions wl-actions--end wl-rule">
         <button type="button" className="wl-btn wl-btn--ghost" onClick={onClose}>Cancel</button>
         <button type="button" className="wl-btn wl-btn--primary" disabled={!name.trim() || saving}
-          onClick={async () => { setSaving(true); setError(""); try { await onSave({ ...item, name: name.trim(), price: parse(price), target: parse(target), collection, category }); } catch { setError("Could not save the update. Please try again."); setSaving(false); } }}>{saving ? "Saving..." : "Save update"}</button>
+          onClick={async () => { setSaving(true); setError(""); try { await onSave({ ...item, name: name.trim(), price: parse(price), target: parse(target), collection, collections:[...new Set([collection,...memberships(item).filter(n=>n!==item.collection)].filter(Boolean))], category }); } catch { setError("Could not save the update. Please try again."); setSaving(false); } }}>{saving ? "Saving..." : "Save update"}</button>
       </div>
     </Modal>
   );
 }
 
 /* ---------- product details / price history ---------- */
-function ProductModal({ item, onClose, onEdit, onDelete, onUpdate, onBought }) {
+export function ProductModal({ item, onClose, onEdit, onDelete, onUpdate, onBought, purchase, onUndo }) {
+  const [confirmBuy,setConfirmBuy]=useState(false);
+  const [hover,setHover]=useState(null);
   const [tab, setTab] = useState("details");
   const [buying, setBuying] = useState(false);
   const [buyError, setBuyError] = useState("");
@@ -132,12 +139,12 @@ function ProductModal({ item, onClose, onEdit, onDelete, onUpdate, onBought }) {
   let dropsInRow = 0;
   for (let i = n - 1; i > 0 && hist[i] < hist[i - 1]; i--) dropsInRow++;
 
-  const W = 720, H = 140, min = lo - (hi - lo) * 0.15, max = hi + (hi - lo) * 0.1 || hi + 1;
+  const W = 720, H = 140, min = lo - (hi - lo) * 0.15, max = hi + Math.max((hi - lo) * 0.1, 1);
   const pts = hist.map((v, i) => [(i / (n - 1)) * W, H - ((v - min) / (max - min)) * H]);
   const line = pts.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`).join(" ");
 
   return (
-    <Modal onClose={onClose} className="wl-modal--lg" labelledBy="product-dialog-title">
+    <Modal onClose={onClose} className="wl-modal--lg wl-product-modal" labelledBy="product-dialog-title">
       <h2 id="product-dialog-title" className="sr-only">{item.name}</h2>
       <img className="wl-peek" src={find} alt="" />
       <button type="button" className="wl-x wl-x--abs" aria-label="Close" onClick={onClose}><CloseIcon /></button>
@@ -153,7 +160,7 @@ function ProductModal({ item, onClose, onEdit, onDelete, onUpdate, onBought }) {
           <Thumb item={item} className="wl-detail__img" />
           <div className="wl-detail__info">
             <h2>{item.name.split(",")[0]}</h2>
-            {item.url && <a className="wl-shop" href={item.url} target="_blank" rel="noreferrer"><b>S</b>View Product on {item.store || "store"}</a>}
+            {item.url && <a className="wl-shop" href={item.url} target="_blank" rel="noreferrer"><PlatformLogo store={item.store} />View Product on {item.store || "store"}</a>}
             <s>{peso(item.original)}</s>
             <div className="wl-pricerow">
               <strong>{peso(item.price)}</strong>
@@ -165,14 +172,16 @@ function ProductModal({ item, onClose, onEdit, onDelete, onUpdate, onBought }) {
             </div>
             <ProgressBar item={item} />
             <div className="wl-ends"><span>Original: {peso(item.original)}</span><span>Target: {peso(item.target)}</span></div>
-            <div className="wl-alert">
+            {!purchase && <div className="wl-alert">
               <div><b>Tracking Alert</b><p>Notify me when the price is at or below {peso(item.target)}.</p></div>
               <button type="button" role="switch" aria-label="Price tracking alert" aria-checked={item.alert} className={`wl-switch${item.alert ? " is-on" : ""}`}
                 onClick={() => onUpdate({ ...item, alert: !item.alert })}><i /></button>
               <span>{item.alert ? "On" : "Off"}</span>
-            </div>
+            </div>}
             <p className="wl-muted wl-meta">
               Category: {item.category || DEFAULT_CATEGORY}
+              <br />Added: {item.createdAt ? new Date(item.createdAt).toLocaleString() : "Not recorded"}
+              {purchase && <><br />Purchased: {new Date(purchase.boughtAt).toLocaleString()}</>}
               {item.expiresAt && <> · Alert expires: {new Date(`${item.expiresAt}T00:00:00`).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })}</>}
               {item.stockThreshold && <> · Stock alert at {item.stockThreshold}</>}
             </p>
@@ -182,16 +191,21 @@ function ProductModal({ item, onClose, onEdit, onDelete, onUpdate, onBought }) {
         <div className="wl-hist">
           <div className="wl-chart">
             <span>PHP</span>
-            <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label="Price history chart">
+            <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label="Price history chart" tabIndex={0}
+              onPointerMove={e=>{const r=e.currentTarget.getBoundingClientRect();const i=Math.round(Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*(n-1));setHover({i,x:e.clientX,y:e.clientY});}}
+              onPointerLeave={()=>setHover(null)} onFocus={e=>{const r=e.currentTarget.getBoundingClientRect();setHover({i:n-1,x:r.left+r.width/2,y:r.top+24});}} onBlur={()=>setHover(null)}
+              onKeyDown={e=>{if(e.key==="ArrowLeft" || e.key==="ArrowRight"){e.preventDefault();setHover(h=>({...h,i:Math.max(0,Math.min(n-1,(h?.i??0)+(e.key==="ArrowRight"?1:-1)))}));}}}>
               {[H * 0.1, H * 0.45, H - 1].map((y) => <line key={y} x1="0" x2={W} y1={y} y2={y} stroke="#fff" strokeOpacity=".85" />)}
-              <path d={`${line} L${W} ${H} L0 ${H}Z`} fill="#fff" fillOpacity=".4" />
+              <path d={`${line} L${W} ${H} L0 ${H}Z`} fill="#fff" fillOpacity=".4" /><path d={line} fill="none" stroke="#fff" strokeWidth="3" />
             </svg>
+            {hover && <div className="wl-chart-tooltip" role="status" style={{left:Math.max(8,Math.min(hover.x+12,window.innerWidth-232)),top:Math.max(8,Math.min(hover.y+12,window.innerHeight-140))}}><b>{entries[hover.i].at ? new Date(entries[hover.i].at).toLocaleString() : "Date not recorded"}</b><div>Price: {peso(hist[hover.i])}</div><div>Tax: {entries[hover.i].tax == null ? "Not provided" : peso(entries[hover.i].tax)}</div></div>}
           </div>
           <div className="wl-stats">
             {[["Total Change", "since last added", Math.abs(saved)], ["Last Change", timeAgo(lastChangeAt || item.createdAt), Math.abs(last)], ["Lowest Price", "since last added", lo], ["Highest Price", "since last added", hi]].map(([t, s, v]) => (
               <div key={t}><b>{t}</b><small>{s}</small><strong className={t === "Last Change" && last > 0 ? "is-red" : ""}>{compact(v)}</strong></div>
             ))}
           </div>
+          <div className="wl-history-log" aria-label="Recorded prices">{entries.map((entry,index)=><div key={index}><time dateTime={entry.at ? new Date(entry.at).toISOString() : undefined}>{entry.at ? new Date(entry.at).toLocaleString() : "Date not recorded"}</time><strong>{peso(Number(entry.price)||0)}</strong><small>Tax: {entry.tax == null ? "Not provided" : peso(entry.tax)}</small></div>)}</div>
         </div>
       )}
 
@@ -200,22 +214,25 @@ function ProductModal({ item, onClose, onEdit, onDelete, onUpdate, onBought }) {
         {tab === "history" && (
           <div className="wl-tip">
             <img src={mascot} alt="Pixie" />
-            <div><b>Pixie’s Tip:</b><p>{dropsInRow >= 2 ? `The price has dropped ${dropsInRow} times in a row! It is possible that it will go lower. However, be alert!` : saved > 0 ? "The price is lower than when you added it. I’ll keep watching for more." : "The price hasn’t dropped yet. I’ll keep watching it for you."}</p></div>
+            <div><b>Pixie’s Tip:</b><p>{last > 0 ? "The price has increased. Consider waiting and keep your target alert on." : dropsInRow >= 2 ? `The price has dropped ${dropsInRow} times in a row! It is possible that it will go lower. However, be alert!` : saved > 0 ? "The price is lower than when you added it. I’ll keep watching for more." : "The price hasn’t dropped yet. I’ll keep watching it for you."}</p></div>
           </div>
         )}
         <div className="wl-actions wl-actions--end">
-          <button type="button" className="wl-btn wl-btn--outline-red" onClick={onDelete}>Delete Item</button>
+          {onDelete && <button type="button" className="wl-btn wl-btn--danger" onClick={onDelete}>Delete Item</button>}
           {/* added: moves the item to "Bought and Savings" */}
-          {onBought && <button type="button" className="wl-btn wl-btn--ghost" disabled={buying} onClick={async () => { setBuying(true); setBuyError(""); try { await onBought(item); } catch { setBuyError("Could not record this purchase. Please try again."); setBuying(false); } }}>{buying ? "Saving purchase..." : "Mark as bought"}</button>}
-          <button type="button" className="wl-btn wl-btn--primary" onClick={onEdit}>Edit Item</button>
+          {onBought && <button type="button" className="wl-btn wl-btn--ghost" onClick={()=>setConfirmBuy(true)}>Mark as bought</button>}
+          {onUndo && <button type="button" className="wl-btn wl-btn--primary" disabled={buying} onClick={async()=>{setBuying(true);setBuyError("");try{await onUndo();onClose();}catch(e){setBuyError(e.message);setBuying(false);}}}>Undo mark as bought</button>}
+
+          {onEdit && <button type="button" className="wl-btn wl-btn--primary" onClick={onEdit}>Edit Item</button>}
         </div>
       </div>
+      {confirmBuy && <Modal onClose={()=>setConfirmBuy(false)} className="wl-modal--sm"><h2>Mark this item as bought?</h2><p>{item.name} will move to Bought and savings at {peso(item.price)}. You can undo this later.</p>{buyError && <p role="alert">{buyError}</p>}<div className="wl-actions"><button className="wl-btn" disabled={buying} onClick={()=>setConfirmBuy(false)}>Cancel</button><button className="wl-btn wl-btn--primary" disabled={buying} onClick={async()=>{setBuying(true);setBuyError("");try{await onBought(item);setConfirmBuy(false);}catch(e){setBuyError(e.message || "Could not save purchase.");setBuying(false);}}}>{buying?"Saving...":"Confirm purchase"}</button></div></Modal>}
     </Modal>
   );
 }
 
 /* ---------- views ---------- */
-export function CardView({ items, edit, selected, toggle, open, actionLabel = "View Product" }) {
+export function CardView({ items, edit, selected, toggle, open, actionLabel = "View Product", onDelete }) {
   return (
     <div className="wl-cards">
       {items.map((it) => (
@@ -231,9 +248,9 @@ export function CardView({ items, edit, selected, toggle, open, actionLabel = "V
             <ProgressBar item={it} />
             <div className="wl-card__tip">
               <img src={mascot} alt="" />
-              <p>{it.price <= it.target ? "Target hit! Time to buy." : `Almost there! Only ${peso(toTarget(it))} to go.`}</p>
+              <p>{it.price <= it.target ? "Target reached. Check the store before buying." : Number(it.history?.at(-1)?.price) > Number(it.history?.at(-2)?.price) ? "The price increased. Keep watching for a better moment." : it.price < it.original ? "The price is down. Your target alert will keep watch." : "Set a target and watch for a better price."}</p>
             </div>
-            {!edit && <button type="button" className="wl-btn wl-btn--primary wl-btn--full" onClick={() => open(it.id)}>{actionLabel}</button>}
+            {!edit && <><button type="button" className="wl-btn wl-btn--primary wl-btn--full" onClick={() => open(it.id)}>{actionLabel}</button>{onDelete && <button className="wl-btn wl-btn--danger wl-btn--full" onClick={()=>onDelete(it.id)}>Delete item</button>}</>}
           </div>
         </article>
       ))}
@@ -301,8 +318,8 @@ export default function Watchlist({ items, collections = [], openId, onOpened, o
   const allSelected = shown.length > 0 && shown.every((i) => selected.includes(i.id));
   const toggleEdit = () => { setEdit(!edit); setSelected([]); };
 
-  const doDelete = () => {
-    onDelete(confirm);
+  const doDelete = async () => {
+    await onDelete(confirm);
     setConfirm(null); setDetailId(null); setSelected([]); setEdit(false);
   };
 
@@ -330,7 +347,7 @@ export default function Watchlist({ items, collections = [], openId, onOpened, o
 
       {edit && (
         <div className="wl-editbar">
-          <p>Pick items you want to delete.</p>
+          <p aria-live="polite">{selected.length} items selected</p><button className="wl-btn" onClick={toggleEdit}>Done</button>
           <label className="wl-selection"><input type="checkbox" checked={allSelected} onChange={() => setSelected(allSelected ? [] : shown.map((i) => i.id))} />Select all</label>
           <button type="button" className="wl-red wl-red--strong" disabled={!selected.length} onClick={() => setConfirm(selected)}><TrashI />Delete items</button>
         </div>
@@ -346,7 +363,7 @@ export default function Watchlist({ items, collections = [], openId, onOpened, o
       ) : !shown.length ? (
         <section className="wl-empty wl-empty--sm"><h2>No matches.</h2><p>{searchError || query.trim() ? "Nothing in your watchlist matches your search" : "Nothing in this category yet"}{category !== "All" ? ` in ${category}` : ""}.</p></section>
       ) : view === "card" ? (
-        <CardView items={shown} edit={edit} selected={selected} toggle={toggle} open={setDetailId} />
+        <CardView items={shown} edit={edit} selected={selected} toggle={toggle} open={setDetailId} onDelete={id=>setConfirm([id])} />
       ) : (
         <ListView items={shown} edit={edit} selected={selected} toggle={toggle} open={setDetailId} sort={sort} setSort={setSort} />
       )}

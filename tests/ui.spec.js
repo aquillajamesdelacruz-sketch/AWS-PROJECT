@@ -91,7 +91,7 @@ test('keyboard selection and list sorting preserve native semantics', async ({ p
 });
 test('collection banner and modal stay within narrow bounds', async ({ page }) => {
   await page.goto(fixture('collection'));
-  await page.locator('.cl-card').click();
+  await page.getByRole('button',{name:/Next upgrade/}).click();
   const banner=await page.locator('.cl-banner').boundingBox();
   const heading=await page.getByRole('heading',{name:'Tracked items'}).boundingBox();
   expect(banner.y+banner.height).toBeLessThanOrEqual(heading.y);

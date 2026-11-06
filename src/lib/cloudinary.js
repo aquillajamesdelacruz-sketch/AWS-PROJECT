@@ -1,3 +1,4 @@
+import { productImage } from "./media.js";
 const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
 const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 
@@ -41,7 +42,7 @@ const send = async (fileOrUrl) => {
 
   // Return Cloudinary image URL
   if (!data.secure_url) throw new Error("Cloudinary did not return an image address.");
-  return data.secure_url;
+  return productImage(data.secure_url,960);
 };
 
 // Upload a picture the user picked from their device

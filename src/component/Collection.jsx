@@ -1,3 +1,4 @@
+import { memberships, inCollection } from "../lib/memberships.js";
 import { CloseIcon } from "./Icons.jsx";
 import { useMemo, useState } from "react";
 import mascot from "../assets/Mascot.png";
@@ -24,12 +25,13 @@ function CreateCollection({ existing, onClose, onCreate }) {
   const [color, setColor] = useState(COLORS[0].value);
   const [error, setError] = useState("");
 
-  const submit = (e) => {
+  const [saving,setSaving]=useState(false);
+  const submit = async (e) => {
     e.preventDefault();
     const clean = name.trim();
     if (!clean) return;
     if (existing.some((n) => n.toLowerCase() === clean.toLowerCase())) return setError("You already have a collection with that name.");
-    onCreate({ name: clean, color });
+    setSaving(true); try { await onCreate({ name: clean, color }); } catch(e) { setError(e.message || "Could not create collection."); setSaving(false); }
   };
 
   return (
@@ -56,7 +58,7 @@ function CreateCollection({ existing, onClose, onCreate }) {
 
         <div className="wl-actions wl-rule">
           <button type="button" className="wl-btn wl-btn--ghost" onClick={onClose}>Cancel</button>
-          <button type="submit" className="wl-btn wl-btn--primary" disabled={!name.trim()}>Create</button>
+          <button type="submit" className="wl-btn wl-btn--primary" disabled={saving || !name.trim()}>Create</button>
         </div>
       </form>
     </Modal>
@@ -64,7 +66,15 @@ function CreateCollection({ existing, onClose, onCreate }) {
 }
 
 /* ---------- detail ---------- */
-function Detail({ collection, items, onBack, onViewItem, onAddItem }) {
+function Detail({ collection, items, allItems, collectionNames, onBack, onViewItem, onAddItem, onRename, onDelete, onAddMembers }) {
+  const [manage,setManage]=useState(false);
+  const [picker,setPicker]=useState(false);
+  const [name,setName]=useState(collection.name);
+  const [selected,setSelected]=useState([]);
+  const [deleting,setDeleting]=useState(false);
+  const [busy,setBusy]=useState(false);
+  const [error,setError]=useState("");
+  const perform=async action=>{setBusy(true);setError("");try{await action();}catch(e){setError(e.message || "Could not save. Try again.");}finally{setBusy(false);}};
   const [showAll, setShowAll] = useState(false);
   const s = statsFor(items);
   const shown = showAll ? items : items.slice(0, 4);
@@ -72,7 +82,7 @@ function Detail({ collection, items, onBack, onViewItem, onAddItem }) {
   return (
     <div className="wl cl">
       <button type="button" className="cl-back" onClick={onBack}>Back to Collections</button>
-      <h1 className="cl-title">{collection.name}</h1>
+      <div className="cl-detail-heading"><h1 className="cl-title">{collection.name}</h1><div className="wl-actions"><button className="wl-btn wl-btn--ghost" onClick={()=>{setManage(true);setError("");}}>Edit collection</button><button className="wl-btn wl-btn--primary" onClick={()=>{setPicker(true);setError("");}}>Add from Watchlist</button></div></div>
 
       <section className="cl-banner">
         <img src={mascot} alt="Pixie" />
@@ -115,12 +125,15 @@ function Detail({ collection, items, onBack, onViewItem, onAddItem }) {
       ) : (
         <div className="cl-none"><button type="button" className="wl-btn wl-btn--primary" onClick={onAddItem}>+ Add an item</button></div>
       )}
+      {manage && <Modal onClose={()=>setManage(false)} className="wl-modal--md"><h2>Edit collection</h2><label className="wl-label" htmlFor="collection-rename">Collection name</label><input id="collection-rename" className="wl-input" value={name} maxLength={40} onChange={e=>setName(e.target.value)} />{error && <p role="alert" className="cl-error">{error}</p>}<div className="wl-actions"><button className="wl-btn wl-btn--ghost" onClick={()=>setManage(false)}>Cancel</button><button className="wl-btn wl-btn--danger" onClick={()=>{setManage(false);setDeleting(true);}}>Delete collection</button><button className="wl-btn wl-btn--primary" disabled={busy || !name.trim()} onClick={()=>perform(async()=>{if(collectionNames.some(n=>n!==collection.name && n.toLowerCase()===name.trim().toLowerCase())) throw new Error("A collection already uses this name.");await onRename(collection,name.trim());setManage(false);})}>Save name</button></div></Modal>}
+      {deleting && <Modal onClose={()=>setDeleting(false)} className="wl-modal--sm"><h2>Delete {collection.name}?</h2><p>Items stay in your watchlist and other collections.</p>{error && <p role="alert">{error}</p>}<div className="wl-actions"><button className="wl-btn" onClick={()=>setDeleting(false)}>Cancel</button><button className="wl-btn wl-btn--danger" disabled={busy} onClick={()=>perform(async()=>{await onDelete([collection.id]);onBack();})}>Delete collection</button></div></Modal>}
+      {picker && <Modal onClose={()=>setPicker(false)} className="wl-modal--md"><h2>Add from Watchlist</h2><div className="cl-picker">{allItems.length===0 && <p>Your watchlist is empty.</p>}{allItems.map(item=>{const already=inCollection(item,collection.name);const others=memberships(item).filter(n=>n!==collection.name);return <label className="cl-picker__row" key={item.id}><input type="checkbox" checked={already || selected.includes(item.id)} disabled={already || busy} onChange={()=>setSelected(ids=>ids.includes(item.id)?ids.filter(id=>id!==item.id):[...ids,item.id])}/><span><b>{item.name}</b>{already && <small>Already in this collection</small>}{others.map(n=><small className="cl-membership" key={n}>Item is also in {n} collection</small>)}</span></label>;})}</div>{error && <p role="alert">{error}</p>}<div className="wl-actions"><button className="wl-btn" onClick={()=>setPicker(false)}>Cancel</button><button className="wl-btn wl-btn--primary" disabled={busy || !selected.length} onClick={()=>perform(async()=>{await onAddMembers(collection.name,allItems.filter(i=>selected.includes(i.id)));setSelected([]);setPicker(false);})}>{busy?"Adding...":"Add selected items"}</button></div></Modal>}
     </div>
   );
 }
 
 /* ---------- page ---------- */
-export default function Collection({ items, collections, onCreate, onDelete, onViewItem, onAddItem }) {
+export default function Collection({ items, collections, onCreate, onDelete, onViewItem, onAddItem, onRename, onAddMembers }) {
   const [openId, setOpenId] = useState(null);
   const [view, setView] = useState("list");
   const [query, setQuery] = useState("");
@@ -128,8 +141,10 @@ export default function Collection({ items, collections, onCreate, onDelete, onV
   const [edit, setEdit] = useState(false);
   const [selected, setSelected] = useState([]);
   const [confirm, setConfirm] = useState(false);
+  const [deleteError,setDeleteError]=useState("");
+  const [deleting,setDeleting]=useState(false);
 
-  const rows = useMemo(() => collections.map((c) => ({ ...c, items: items.filter((i) => i.collection === c.name) })), [collections, items]);
+  const rows = useMemo(() => collections.map((c) => ({ ...c, items: items.filter((i) => inCollection(i,c.name)) })), [collections, items]);
   const shown = rows.filter((c) => c.name.toLowerCase().includes(query.trim().toLowerCase()));
   const open = rows.find((c) => c.id === openId);
   const allSelected = shown.length > 0 && shown.every((c) => selected.includes(c.id));
@@ -137,7 +152,7 @@ export default function Collection({ items, collections, onCreate, onDelete, onV
   const toggleEdit = () => { setEdit(!edit); setSelected([]); };
 
   if (open) {
-    return <Detail collection={open} items={open.items} onBack={() => setOpenId(null)} onViewItem={onViewItem} onAddItem={onAddItem} />;
+    return <Detail collection={open} items={open.items} allItems={items} collectionNames={collections.map(c=>c.name)} onRename={onRename} onDelete={onDelete} onAddMembers={onAddMembers} onBack={() => setOpenId(null)} onViewItem={onViewItem} onAddItem={onAddItem} />;
   }
 
   return (
@@ -155,8 +170,8 @@ export default function Collection({ items, collections, onCreate, onDelete, onV
 
       {edit && (
         <div className="wl-editbar">
-          <p>Pick collections you want to delete.</p>
-          <button type="button" className="wl-red" onClick={() => setSelected(allSelected ? [] : shown.map((c) => c.id))}><span className={`wl-box${allSelected ? " is-on" : ""}`} />Select All</button>
+          <p aria-live="polite">{selected.length} collections selected</p><button type="button" className="wl-btn" onClick={toggleEdit}>Done</button>
+          <button type="button" className="wl-red" aria-pressed={allSelected} onClick={() => setSelected(allSelected ? [] : shown.map((c) => c.id))}><span className={`wl-box${allSelected ? " is-on" : ""}`} />Select All</button>
           <button type="button" className="wl-red wl-red--strong" disabled={!selected.length} onClick={() => setConfirm(true)}><TrashI />Delete collections</button>
         </div>
       )}
@@ -176,9 +191,9 @@ export default function Collection({ items, collections, onCreate, onDelete, onV
             const s = statsFor(c.items);
             const picked = selected.includes(c.id);
             return (
-              <button key={c.id} type="button" className={`cl-card${picked ? " is-selected" : ""}`} style={{ "--c": c.color }}
+              <button key={c.id} type="button" aria-pressed={edit ? picked : undefined} className={`cl-card${picked ? " is-selected" : ""}`} style={{ "--c": c.color }}
                 onClick={() => (edit ? toggle(c.id) : setOpenId(c.id))}>
-                <small>{c.items.length} {c.items.length === 1 ? "item" : "items"}</small>
+                <span className="cl-selection-badge" aria-hidden="true">{edit && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d={picked ? "m5 12 4 4 10-10" : ""}/></svg>}</span><small>{c.items.length} {c.items.length === 1 ? "item" : "items"}</small>
                 <h3>{c.name}</h3>
                 <strong>{peso(s.current)}</strong>
                 <span className="cl-bar" role="progressbar" aria-label={`${c.name} target progress`} aria-valuenow={s.percent} aria-valuemin="0" aria-valuemax="100"><i style={{ width: `${s.progress * 100}%` }} /></span>
@@ -194,14 +209,14 @@ export default function Collection({ items, collections, onCreate, onDelete, onV
         </div>
       )}
 
-      {creating && <CreateCollection existing={collections.map((c) => c.name)} onClose={() => setCreating(false)} onCreate={(c) => { onCreate(c); setCreating(false); }} />}
+      {creating && <CreateCollection existing={collections.map((c) => c.name)} onClose={() => setCreating(false)} onCreate={async (c) => { await onCreate(c); setCreating(false); }} />}
       {confirm && (
         <Modal onClose={() => setConfirm(false)} className="wl-modal--sm">
           <h2>Are you sure you want to delete?</h2>
-          <p className="wl-muted">Items inside stay in your watchlist.</p>
+          <p className="wl-muted">Items inside stay in your watchlist.</p>{deleteError && <p role="alert">{deleteError}</p>}
           <div className="wl-actions">
             <button type="button" className="wl-btn wl-btn--ghost" onClick={() => setConfirm(false)}>Cancel</button>
-            <button type="button" className="wl-btn wl-btn--danger" onClick={() => { onDelete(selected); setConfirm(false); setSelected([]); setEdit(false); }}>Delete</button>
+            <button type="button" className="wl-btn wl-btn--danger" disabled={deleting} onClick={async () => {setDeleting(true);setDeleteError("");try{await onDelete(selected); setConfirm(false); setSelected([]); setEdit(false);}catch(e){setDeleteError(e.message || "Could not delete collections.");}finally{setDeleting(false);}}}>Delete</button>
           </div>
         </Modal>
       )}

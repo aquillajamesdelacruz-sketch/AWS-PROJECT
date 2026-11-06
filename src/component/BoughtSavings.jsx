@@ -1,3 +1,4 @@
+import { ProductModal } from "./Watchlist.jsx";
 import { useState } from "react";
 
 import { lastMonths, monthKey } from "../lib/Dashboardstats.js";
@@ -14,8 +15,9 @@ const Icon = ({ type }) => (
 );
 
 // changed: `purchases` now comes from Firebase (users/{uid}/purchases) instead of sample data.
-export default function BoughtSavings({ purchases = [], tools }) {
+export default function BoughtSavings({ purchases = [], tools, onUndo }) {
   const [showAll, setShowAll] = useState(false);
+  const [detail,setDetail]=useState(null);
 
   const totalSaved = sum(purchases, "saved");
   const totalSpent = sum(purchases, "paid");
@@ -65,17 +67,18 @@ export default function BoughtSavings({ purchases = [], tools }) {
         {purchases.length === 0 && <p>No purchases yet. Open an item in your Watchlist and tap “Mark as bought”.</p>}
         <div className="bs-row bs-row--head"><span>ITEM</span><span>STORE</span><span>PAID</span><span>SAVED</span></div>
         {rows.map((p) => (
-          <div className="bs-row" key={p.id}>
+          <button type="button" className="bs-row bs-purchase" key={p.id} onClick={()=>setDetail(p)}>
             <span className="bs-item"><Icon /><b>{p.name}</b></span>
             <span className="bs-store">{p.store}</span>
             <span>Paid {peso(p.paid)}</span>
             <span className="bs-saved">Saved {peso(p.saved)}</span>
-          </div>
+          </button>
         ))}
         {purchases.length > 2 && (
           <button type="button" className="bs-more" onClick={() => setShowAll(!showAll)}>{showAll ? "Show fewer" : `Show all ${purchases.length} purchases`}</button>
         )}
       </section>
+      {detail && <ProductModal item={{...(detail.sourceItem || detail),price:detail.paid,target:detail.sourceItem?.target || detail.paid,original:detail.original}} purchase={detail} onClose={()=>setDetail(null)} onUndo={onUndo ? ()=>onUndo(detail) : undefined} />}
     </div>
   );
 }

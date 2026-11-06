@@ -56,3 +56,28 @@ Automated checks do not establish complete WCAG conformance or guarantee zero re
 1. Generate optimized responsive WebP/AVIF versions of the existing multi-megabyte mascot assets to reduce mobile transfer and rendering costs.
 2. Self-host the existing font and split the Firebase analytics bundle to reduce external font dependencies and the initial JavaScript payload.
 3. Resolve the existing repository-wide lint issues in a separate maintenance change.
+
+
+## Workflow update ? 6 November 2026
+
+This update supersedes earlier descriptions of the sign-up layout, notification modal, onboarding behavior, and landing pill.
+
+- Removed landing filler, added the requested College of Communications and Information Technology attribution, and added public `/privacy` and `/help` routes with working footer links.
+- Sign-up now presents Full name, then Email, both full width, followed by paired password fields (stacked only on very narrow screens). Email and Google registration end signed out and return to Sign in with the registered email prefilled. The auth observer suppresses temporary registration sessions so guest-route guards do not redirect prematurely.
+- Native registration saves the entered name in both Firebase Auth and the profile. Google login uses the provider display name, while an explicitly edited profile name remains authoritative. Email-derived names are no longer used.
+- Notifications are anchored, nonmodal popovers with Escape/outside dismissal. Selecting a notification opens its product. Settings and Log out are now in the profile menu beside notifications, available across dashboard views.
+- Collection details support rename, delete, and Add from Watchlist. The new `collections` array coexists with the legacy `collection` field. Adding membership retains other collections; rename/delete operations update active memberships with multi-path database writes.
+- Bulk selection has contextual counts/actions, custom checkbox badges, selected-card rings, visible focus states, and confirmation/error feedback.
+- Product cards expose Delete item. Purchase recording requires confirmation. New purchase records preserve the complete original item, creation date, and history; clickable purchase rows open details/history with an Undo mark as bought action. Undo restores the original item and removes the purchase in one multi-path write, and checks the watchlist limit and existing item first.
+- Product details/history share consistent modal dimensions. History includes a cursor-following tooltip, keyboard point navigation, a recorded-price log, centered metrics, and status-specific Pixie advice. Tax is shown only when recorded; otherwise the UI says Not provided. Legacy purchase records may not contain an original added date or price history; these are not fabricated.
+- Store links use local platform marks. Source attribution is in `src/assets/platforms/README.md`.
+- General and Account settings are separated. Display names require an explicit save; account email is read-only; password changes require the current password, matching new passwords, and a confirmation dialog.
+- Onboarding is marked seen when first displayed, stored per account in settings and cached locally, so refresh does not repeat it. The compact modal includes quick-start instructions and a gradient progress bar.
+- Sidebar logo/mascot positioning, compact tips, vector stat icons, subtle backgrounds, mobile single-line titles, and distinct card/table presentations were refined. On small screens, tables retain columns and scroll horizontally inside their container.
+- Product thumbnails load lazily with asynchronous decoding. Owned Cloudinary media uses automatic format/quality and a bounded width; external image URLs are preserved.
+
+### Verification scope
+
+The browser suite now has 66 checks, including registration redirects with mocked auth, multiple collection membership/rename, purchase confirmation/undo, explicit name saving, password confirmation, profile/notification popovers, notification deep-linking, and public information pages. The new fixture uses local sample state; live Firebase, Google OAuth, email delivery, and Cloudinary writes are not executed by these checks.
+
+Production builds and targeted lint for the new modules pass. Existing repository-wide lint issues remain outside this feature update. Automated accessibility scans and Chrome/mobile Chromium checks do not replace real-device or screen-reader testing.

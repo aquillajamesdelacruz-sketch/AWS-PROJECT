@@ -7,11 +7,8 @@ const LandingPage = lazy(() => import("./page/landing.jsx"));
 const LoginPage = lazy(() => import("./page/login.jsx"));
 const RegisterPage = lazy(() => import("./page/register.jsx"));
 const DashboardPage = lazy(() => import("./page/dashboard.jsx"));
+const InfoPage = lazy(() => import("./page/InfoPage.jsx"));
 const NotFoundPage = lazy(() => import("./page/error.jsx"));
-
-const nameFromEmail = (email = "") =>
-  email.split("@")[0].split(/[._-]+/).filter(Boolean)
-    .map((part) => part[0].toUpperCase() + part.slice(1)).join(" ");
 
 function PageFallback() {
   return <main className="route-loading" aria-busy="true"><p role="status">Loading page...</p><div className="route-skeleton" aria-hidden="true"><i /><i /><i /></div></main>;
@@ -24,7 +21,9 @@ export default function App() {
 
   useEffect(() => {
     let mounted = true;
+    let version = 0;
     const unsubscribe = watchAuth(async (user) => {
+      const request = ++version;
       if (!mounted) return;
       setCurrentUser(user || null);
       if (!user) {
@@ -34,11 +33,14 @@ export default function App() {
       }
 
       // Set a useful fallback immediately; replace it with the saved profile name when available.
-      setUserName(user.displayName || nameFromEmail(user.email) || "Friend");
+      setUserName(user.displayName || "Friend");
       setAuthReady(true);
       try {
         const profile = await getUserProfile(user.uid);
-        if (mounted && profile?.username) setUserName(profile.username);
+        if (mounted && request === version && profile?.username) {
+          const google = user.providerData?.some(provider => provider.providerId === "google.com");
+          setUserName(!profile.nameEdited && google && user.displayName ? user.displayName : profile.username);
+        }
       } catch (error) {
         console.warn("Could not load the user profile:", error);
       }
@@ -50,9 +52,9 @@ export default function App() {
     };
   }, []);
 
-  const handleAuthenticated = ({ email, name, fullName }) => {
+  const handleAuthenticated = ({ name, fullName }) => {
     setCurrentUser(auth.currentUser);
-    setUserName(fullName || name || nameFromEmail(email) || "Friend");
+    setUserName(fullName || name || "Friend");
   };
 
   //changed this into react route
@@ -73,6 +75,8 @@ export default function App() {
           />
         </Route>
 
+        <Route path="/privacy" element={<InfoPage kind="privacy" />} />
+        <Route path="/help" element={<InfoPage kind="help" />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </Suspense>

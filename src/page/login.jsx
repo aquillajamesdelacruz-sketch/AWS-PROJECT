@@ -1,7 +1,7 @@
 import GoogleIcon from "../component/GoogleIcon.jsx";
 
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import logo from "../assets/Logo.png";
 import mascot from "../assets/Mascot.png";
 
@@ -32,16 +32,17 @@ function EyeIcon({ off }) {
 
 const LogIn = ({ onLogin }) => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [form, setForm] = useState({
-    email: "",
+    email: location.state?.email || "",
     password: ""
   });
 
   const [loading, setLoading] = useState(false);
   const [show, setShow] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [success, setSuccess] = useState(location.state?.registered ? "Account ready. Sign in to continue." : "");
 
 
   // Handle input changes
@@ -264,8 +265,8 @@ const LogIn = ({ onLogin }) => {
       {/* Footer */}
       <footer className="li-footer">
         <span>&copy; 2026 PeekyFox</span>
-        <a href="#privacy">Privacy</a>
-        <a href="#help">Need help?</a>
+        <Link to="/privacy">Privacy</Link>
+        <Link to="/help">Need help?</Link>
       </footer>
 
     </main>

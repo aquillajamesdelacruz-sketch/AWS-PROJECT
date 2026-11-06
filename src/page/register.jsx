@@ -4,7 +4,7 @@ import logo from "../assets/Logo.png";
 import mascot from "../assets/Mascot.png";
 
 import GoogleIcon from "../component/GoogleIcon.jsx";
-import { register, googleSignIn, ensureUserRecord } from "../lib/firebase.js";
+import { register, registerWithGoogle } from "../lib/firebase.js";
 import { validateSignup, MESSAGES } from "../lib/validation/schemas.js";
 import { signupErrorMessage } from "../lib/validation/authErrors.js";
 
@@ -19,7 +19,7 @@ function EyeIcon({ off }) {
 }
 
 //fixed this ahh
-const SignUp = ({ onSignUp }) => {
+const SignUp = () => {
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: "", fullName: "", password: "", confirm: "" });
   const [show, setShow] = useState(false);
@@ -38,7 +38,7 @@ const SignUp = ({ onSignUp }) => {
     if (problem) return setError(problem);
     setError("");
     setLoading(true);
-    
+
       //send the info on firebase register function wit trycath
       try {
             const credential = await register(
@@ -50,12 +50,7 @@ const SignUp = ({ onSignUp }) => {
             setSuccess(MESSAGES.auth.signupSuccess);
             await new Promise((resolve) => setTimeout(resolve, 900));   // let the message be seen
 
-            // Notify App.jsx so it can open the dashboard after registration.
-            onSignUp?.({
-              fullName: form.fullName.trim(),
-              email: credential.user.email || form.email.trim()
-            });
-            navigate("/dashboard", { replace: true });
+            navigate("/login", { replace:true, state:{ email:credential.user.email || form.email.trim(), registered:true } });
         } catch (error) {
             setError(signupErrorMessage(error))
         } finally {
@@ -69,10 +64,8 @@ const SignUp = ({ onSignUp }) => {
     setSuccess("");
     setLoading(true);
     try {
-      const credential = await googleSignIn();
-      const profile = await ensureUserRecord(credential.user);
-      onSignUp?.({ fullName: profile.username, email: credential.user.email || "" });
-      navigate("/dashboard", { replace: true });
+      const email = await registerWithGoogle();
+      navigate("/login", { replace:true, state:{email, registered:true} });
     } catch (error) {
       setError(signupErrorMessage(error));
     } finally {
@@ -100,14 +93,14 @@ const SignUp = ({ onSignUp }) => {
         <section className="li-card" aria-labelledby="su-title">
           <Link className="li-brand" to="/" aria-label="PeekyFox home"><img className="li-card__logo" src={logo} alt="PeekyFox" /></Link>
           <h1 id="su-title" className="li-card__title">Create your account</h1>
-          <p className="li-card__sub">It only takes a minute.</p>
+
 
           <form className="li-form" onSubmit={handleSubmit} noValidate>
-            <label className="li-label" htmlFor="su-email">Email</label>
-            <input id="su-email" className="li-input" type="email" autoComplete="email" value={form.email} onChange={set("email")} />
-
             <label className="li-label" htmlFor="su-name">Full name</label>
             <input id="su-name" className="li-input" type="text" autoComplete="name" value={form.fullName} onChange={set("fullName")} />
+
+            <label className="li-label" htmlFor="su-email">Email</label>
+            <input id="su-email" className="li-input" type="email" autoComplete="email" value={form.email} onChange={set("email")} />
 
             <label className="li-label" htmlFor="su-password">Password</label>
             <input id="su-password" className="li-input" type={show ? "text" : "password"} autoComplete="new-password" value={form.password} onChange={set("password")} />
@@ -141,8 +134,8 @@ const SignUp = ({ onSignUp }) => {
 
       <footer className="li-footer">
         <span>&copy; 2026 PeekyFox</span>
-        <a href="#privacy">Privacy</a>
-        <a href="#help">Need help?</a>
+        <Link to="/privacy">Privacy</Link>
+        <Link to="/help">Need help?</Link>
       </footer>
     </main>
   );

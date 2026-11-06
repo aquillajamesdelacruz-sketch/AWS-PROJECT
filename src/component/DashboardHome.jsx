@@ -1,5 +1,6 @@
+import { productImage } from "../lib/media.js";
 import { CloseIcon } from "./Icons.jsx";
-import Dialog from "./Dialog.jsx";
+import Popover from "./Popover.jsx";
 import { useState } from "react";
 import { storeBreakdown, biggestDrop, topWatched, dropPercent, totalSaved, savedPercent, savingsTrend, trendPath, timeAgo } from "../lib/Dashboardstats.js";
 
@@ -8,7 +9,7 @@ const peso = (n) => "₱" + Number(n).toLocaleString("en-PH", { minimumFractionD
 const today = () => new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 
 function Thumb({ image, alt, className = "" }) {
-  return image ? <img className={`dh-thumb ${className}`} src={image} alt={alt} />
+  return image ? <img className={`dh-thumb ${className}`} src={productImage(image,320)} alt={alt} loading="lazy" decoding="async" />
               : <span className={`dh-thumb dh-thumb--empty ${className}`} aria-hidden="true" />;
 }
 
@@ -24,9 +25,9 @@ function CollectionIcon({ type }) {
 
 // panel now shows real notifications.
 // saved in Firebase so it survives a refresh.
-export function Notifications({ notifications = [], readAt = 0, enabled = true, onMarkRead, onClose }) {
+export function Notifications({ notifications = [], readAt = 0, enabled = true, onMarkRead, onClose, onViewItem }) {
   return (
-    <Dialog className="dh-notif" overlayClassName="db-overlay" onClose={onClose} labelledBy="notifications-title">
+    <Popover className="dh-notif" onClose={onClose} label="Notifications">
       <div className="dh-notif__head">
         <h2 id="notifications-title">Notifications</h2>
         <button type="button" onClick={onClose} aria-label="Close notifications" className="wl-x"><CloseIcon /></button>
@@ -41,12 +42,12 @@ export function Notifications({ notifications = [], readAt = 0, enabled = true, 
           {notifications.map((n) => (
             <li key={n.id}>
               <span className="dh-notif__dot" style={{ background: n.at > readAt ? n.color : "#cbd5e1" }} />
-              <div><p>{n.text}</p><small>{timeAgo(n.at)}</small></div>
+              <button type="button" className="dh-notif__item" onClick={() => { if(n.itemId) onViewItem?.(n.itemId); onClose(); }}><span>{n.text}</span><small>{timeAgo(n.at)}</small></button>
             </li>
           ))}
         </ul>
       )}
-    </Dialog>
+    </Popover>
   );
 }
 
@@ -91,8 +92,8 @@ export default function DashboardHome({ items = [], purchases = [], collections 
         <div className="dh-insights">
           <h2>Quick Insights</h2>
           <div className="dh-insights__row">
-            <div className="dh-stat"><span className="dh-stat__icon" /><p>Currently Tracking<br /><b>{items.length} {items.length === 1 ? "Item" : "Items"}</b></p></div>
-            <div className="dh-stat"><span className="dh-stat__icon" /><p>Currently Collecting<br /><b>{collections.length} {collections.length === 1 ? "Collection" : "Collections"}</b></p></div>
+            <div className="dh-stat"><span className="dh-stat__icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></span><p>Currently Tracking<br /><b>{items.length} {items.length === 1 ? "Item" : "Items"}</b></p></div>
+            <div className="dh-stat"><span className="dh-stat__icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m3 7 9-4 9 4-9 4-9-4Zm0 5 9 4 9-4M3 17l9 4 9-4"/></svg></span><p>Currently Collecting<br /><b>{collections.length} {collections.length === 1 ? "Collection" : "Collections"}</b></p></div>
           </div>
           <div className="dh-stores">
             Current Stores

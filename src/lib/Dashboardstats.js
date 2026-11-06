@@ -150,6 +150,7 @@ export function buildNotifications(items, limit = 8) {
       const dropped = num(last.price) < num(prev.price);
       list.push({
         id: `${item.id}-${last.at}`,
+        itemId: item.id,
         text: dropped ? `${name} dropped to ${peso(last.price)}!` : `${name} went up to ${peso(last.price)}`,
         at: num(last.at),
         color: dropped ? "#10b981" : "#ef4444",
@@ -159,6 +160,7 @@ export function buildNotifications(items, limit = 8) {
     if (num(item.target) > 0 && num(item.price) <= num(item.target)) {
       list.push({
         id: `${item.id}-target`,
+        itemId: item.id,
         text: `${name} reached your target of ${peso(item.target)}!`,
         at: num(last?.at) || num(item.createdAt),
         color: "#1e3a8a",
