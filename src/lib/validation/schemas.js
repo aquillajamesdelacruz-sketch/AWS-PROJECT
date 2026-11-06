@@ -3,7 +3,7 @@ import { z } from "zod";
 // Every user-facing validation message lives here so the wording can be matched
 // to the test cases in ONE place.
 
-export const MAX_WATCHLIST_ITEMS = 100;
+export const MAX_WATCHLIST_ITEMS = 5;
 export const MAX_TARGET_PRICE = 10000;
 export const MAX_URL_LENGTH = 2048;
 export const MAX_SEARCH_LENGTH = 255;

@@ -3,7 +3,7 @@
 .st-notice { position: fixed; right: 32px; bottom: 28px; z-index: 80; padding: 12px 16px; border-radius: 12px; background: #0f172a; color: #fff; font-size: 14px; font-weight: 700; box-shadow: 0 8px 24px rgba(0, 0, 0, .25); }
 
 .st-card { margin-top: 24px; padding: 24px; border-radius: 24px; background: #fff; box-shadow: 0 6px 24px rgba(194, 120, 60, .1); }
-.st-title + .st-card { margin-top: 40px; }
+.st-title + .st-card, .st-top + .st-card { margin-top: 24px; }
 .st-card h2 { font-size: 18px; font-weight: 800; }
 .st-head { display: flex; justify-content: space-between; align-items: center; }
 

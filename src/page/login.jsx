@@ -1,4 +1,5 @@
 import GoogleIcon from "../component/GoogleIcon.jsx";
+import PageHead from "../component/PageHead.jsx";
 
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
@@ -114,7 +115,9 @@ const LogIn = ({ onLogin }) => {
   };
 
   return (
-    <main className="li-page">
+    <>
+      <PageHead title="Log in" description="Sign in to PeekyFox to check your price watchlist, collections and savings." />
+      <main className="li-page">
       <div className="li-layout">
 
         {/* Left Section */}
@@ -270,6 +273,7 @@ const LogIn = ({ onLogin }) => {
       </footer>
 
     </main>
+    </>
   );
 };
 

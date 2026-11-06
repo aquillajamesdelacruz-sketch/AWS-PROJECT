@@ -1,4 +1,5 @@
 import Popover from "../component/Popover.jsx";
+import PageHead from "../component/PageHead.jsx";
 import { inCollection } from "../lib/memberships.js";
 import { CloseIcon } from "../component/Icons.jsx";
 import Dialog from "../component/Dialog.jsx";
@@ -92,6 +93,13 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
   const active = routeToView(location.pathname);
   const setActive = (label) => navigate(DASHBOARD_ROUTES[label] || "/dashboard");
   const [userName, setUserName] = useState(initialName);
+  const [prevInitialName, setPrevInitialName] = useState(initialName);
+  // Re-sync the copy when the authenticated profile (prop) changes — done
+  // during render per https://react.dev/learn/you-might-not-need-an-effect.
+  if (initialName !== prevInitialName) {
+    setPrevInitialName(initialName);
+    setUserName(initialName);
+  }
   const [settings, setSettings] = useState({ email: "", inApp: true, emailAlerts: false, frequency: "instant", stockThreshold: DEFAULT_STOCK_THRESHOLD, theme: loadTheme() });
   const firstName = userName.split(" ")[0];
   const initials = userName.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
@@ -115,10 +123,6 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
     if (!knownPath) navigate("/dashboard", { replace: true });
   }, [location.pathname, navigate]);
 
-  // Keep the displayed user name in sync with the authenticated profile.
-  useEffect(() => {
-    setUserName(initialName);
-  }, [initialName]);
 
   // Light / Dark / Match device. The result is set on <html data-theme="light|dark"> (styles are in Theme.css).
   useEffect(() => {
@@ -405,6 +409,11 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
 
 
   return (
+    <>
+      <PageHead
+        title={active}
+        description="Your PeekyFox dashboard: track watchlist prices, organize collections, and see your savings."
+      />
     <div className="db-app">
       <a className="skip-link" href="#main-content">Skip to content</a>
       {/* ---------- Sidebar ---------- */}
@@ -431,7 +440,7 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
       </aside>
 
       {/* ---------- Main ---------- */}
-      <main className={`db-main${["Watchlist", "Collection", "Bought and Savings"].includes(active) ? " db-main--aligned-title" : ""}${active === "Watchlist" ? " db-main--watchlist" : ""}`} id="main-content" tabIndex={-1}>
+      <main className={`db-main${["Watchlist", "Collection", "Bought and Savings", "Settings"].includes(active) ? " db-main--aligned-title" : ""}${active === "Watchlist" ? " db-main--watchlist" : ""}`} id="main-content" tabIndex={-1}>
         <div className="db-route" key={active}>
         {active !== "Dashboard" && <div className="db-utility-header">{tools}</div>}
         {active === "Watchlist" ? (
@@ -578,5 +587,6 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
         </Dialog>
       )}
     </div>
+    </>
   );
 }

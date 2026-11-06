@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import PageHead from "../component/PageHead.jsx";
 import logo from "../assets/Logo.png";
 import mascot from "../assets/Mascot.png";
 import seal from "../assets/bulsu.png";
@@ -43,7 +44,9 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div className={`pf-page${motionPaused ? " pf-motion-paused" : ""}`} ref={page}>
+    <>
+      <PageHead title="PeekyFox" description="PeekyFox helps you track prices on Shopee, Lazada, Amazon and TikTok Shop, set target prices, and get alerted when the price drops. A little patience. A better price." />
+      <div className={`pf-page${motionPaused ? " pf-motion-paused" : ""}`} ref={page}>
       <div className="pf-ambient" aria-hidden="true"><i /><i /></div>
       <a className="skip-link" href="#landing-content">Skip to content</a>
       <header className="pf-header">
@@ -86,5 +89,6 @@ export default function LandingPage() {
       </main>
       <footer className="pf-footer"><a className="pf-logo" href="#home" aria-label="PeekyFox home"><img src={logo} alt="PeekyFox" loading="lazy" /></a><p>&copy; {new Date().getFullYear()} PeekyFox. Built by students from Bulacan State University.</p><button className="pf-motion-control" type="button" aria-pressed={motionPaused} onClick={() => setMotionPaused(!motionPaused)}>{motionPaused ? "Resume background motion" : "Pause background motion"}</button><Link to="/privacy">Privacy</Link><Link to="/help">Need help?</Link><a href="#home">Back to top<Icon kind="arrow" /></a></footer>
     </div>
+    </>
   );
 }

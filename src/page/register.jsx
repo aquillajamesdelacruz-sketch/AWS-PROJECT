@@ -4,6 +4,7 @@ import logo from "../assets/Logo.png";
 import mascot from "../assets/Mascot.png";
 
 import GoogleIcon from "../component/GoogleIcon.jsx";
+import PageHead from "../component/PageHead.jsx";
 import { register, registerWithGoogle } from "../lib/firebase.js";
 import { validateSignup, MESSAGES } from "../lib/validation/schemas.js";
 import { signupErrorMessage } from "../lib/validation/authErrors.js";
@@ -74,7 +75,9 @@ const SignUp = () => {
   };
 
   return (
-    <main className="li-page su">
+    <>
+      <PageHead title="Create an account" description="Create a free PeekyFox account and start catching price drops today. A little patience. A better price." />
+      <main className="li-page su">
       <div className="li-layout">
         <section className="li-intro">
           <h2 className="li-title">
@@ -138,6 +141,7 @@ const SignUp = () => {
         <Link to="/help">Need help?</Link>
       </footer>
     </main>
+    </>
   );
 }
 

@@ -3,7 +3,7 @@
 .bs h2 { margin: 0; }
 .bs p { margin: 0; }
 
-.bs-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-top: 40px; }
+.bs-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-top: 24px; }
 .bs-stat { height: clamp(84px, 11.5vh, 124px); padding: 24px; border-radius: 24px; background: #fff; box-shadow: 0 6px 24px rgba(194, 120, 60, .1); }
 .bs-stat small { display: block; font-size: 12px; }
 .bs-stat b { display: block; margin-top: 24px; font-size: clamp(24px, 3.4vh, 32px); font-weight: 800; line-height: 1.1; }

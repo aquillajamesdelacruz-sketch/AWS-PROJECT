@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import PageHead from "../component/PageHead.jsx";
 import logo from "../assets/Logo.png";
 const faqs = [
  ["How do I track a product?", "Open Watchlist, choose Add item, paste the product link, then review the fetched details and set your target price before saving."],
@@ -10,7 +11,15 @@ const faqs = [
 ];
 export default function InfoPage({kind}) {
  const privacy = kind === "privacy";
- return <main className="pf-info"><Link to="/" aria-label="PeekyFox home"><img src={logo} alt="PeekyFox" width="160" /></Link><h1>{privacy ? "Privacy policy" : "Help and frequently asked questions"}</h1>
+ return (
+ <>
+  <PageHead
+    title={privacy ? "Privacy policy" : "Help & FAQ"}
+    description={privacy
+      ? "What PeekyFox stores, how your account data is handled, and your choices to export or delete it."
+      : "How to track a product, manage collections, undo purchases, and manage your PeekyFox account."}
+  />
+  <main className="pf-info"><Link to="/" aria-label="PeekyFox home"><img src={logo} alt="PeekyFox" width="160" /></Link><h1>{privacy ? "Privacy policy" : "Help and frequently asked questions"}</h1>
  {privacy ? <>
  <p>This notice describes how this student project uses information in the current application.</p>
  <h2>Information you provide</h2><p>PeekyFox stores your account name and email, saved product links and images, price history, targets, collections, purchases, and preferences. Password authentication is handled by Firebase Authentication. Google sign-in supplies your account name and email.</p>
@@ -19,5 +28,7 @@ export default function InfoPage({kind}) {
  <h2>Your controls</h2><p>You can change alert preferences, export active watchlist items, and delete your account in Account settings. Account deletion removes your Firebase profile and authentication account; separately uploaded images, provider logs, and backups may remain under the providers' retention policies.</p>
  <h2>Questions</h2><p>Contact the project team at <a href="mailto:peekyfox@contact.com">peekyfox@contact.com</a> with privacy questions.</p>
  </> : <>{faqs.map(([q,a])=><details key={q}><summary>{q}</summary><p>{a}</p></details>)}<p>Need more help? <a href="mailto:peekyfox@contact.com">Contact the project team</a>.</p></>}
- <nav aria-label="More information"><Link to="/login">Sign in</Link><Link to={privacy ? "/help" : "/privacy"}>{privacy ? "Need help?" : "Privacy policy"}</Link></nav></main>;
+ <nav aria-label="More information"><Link to="/login">Sign in</Link><Link to={privacy ? "/help" : "/privacy"}>{privacy ? "Need help?" : "Privacy policy"}</Link></nav></main>
+ </>
+ );
 }
