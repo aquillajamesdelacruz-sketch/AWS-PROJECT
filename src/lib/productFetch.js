@@ -25,12 +25,21 @@ const findPrice = (...texts) => {
 const getJson = async (endpoint, signal) => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-  signal?.addEventListener("abort", () => controller.abort());
+  if (signal?.aborted) controller.abort();
+  else signal?.addEventListener("abort", () => controller.abort(), { once: true });
 
   try {
     const response = await fetch(endpoint, { signal: controller.signal });
-    if (!response.ok) throw new Error(`The link reader answered ${response.status}.`);
-    return await response.json();
+    if (response.status === 429) {
+      throw new Error("The free link reader is out of requests for today. Please type the details yourself, or try again later.");
+    }
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.error || body.message || `The link reader answered ${response.status}.`);
+    }
+    return await response.json().catch(() => {
+      throw new Error("The link reader sent something unreadable.");
+    });
   } catch (error) {
     if (error.name === "AbortError") throw new Error("Reading the link took too long.");
     throw error;
@@ -39,7 +48,23 @@ const getJson = async (endpoint, signal) => {
   }
 };
 
-export async function fetchProductInfo(url, signal) {
+// Same link asked twice (React dev mode runs effects twice, or the user clicks Fetch again)
+// shares one request and reuses the answer, so the free daily limit is not wasted.
+const cache = new Map();
+
+export function fetchProductInfo(url, signal) {
+  const key = String(url || "").trim();
+  if (cache.has(key)) return cache.get(key);
+
+  const promise = readProduct(url, signal).catch((error) => {
+    cache.delete(key);               // failures are not remembered, so retrying works
+    throw error;
+  });
+  cache.set(key, promise);
+  return promise;
+}
+
+async function readProduct(url, signal) {
   // never fetch an invalid / unsupported link
   const problem = validateProductUrl(url);
   if (problem) throw new Error(problem);
@@ -62,8 +87,14 @@ export async function fetchProductInfo(url, signal) {
   }
 
   const page = data.data;
+  // shops that block the reader return a generic page ("Shopee Philippines", "Access denied")
+  const title = cleanTitle(page.title);
+  const generic = /^(shopee|lazada|amazon|tiktok)[^a-z0-9]*(philippines|ph|\.com)?$|access denied|robot|captcha|just a moment/i.test(title);
+  if (generic) {
+    throw new Error("The shop blocked the reader. Deploy the productInfo function (see README) or fill in the details yourself.");
+  }
   return {
-    name: cleanTitle(page.title),
+    name: title,
     price: findPrice(page.title, page.description),
     original: 0,                                  // a plain page preview never shows the old price
     image: page.image?.url || "",

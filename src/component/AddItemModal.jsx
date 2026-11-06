@@ -60,6 +60,8 @@ export default function AddItemModal({ initialUrl = "", collections = [], watchl
   const [fetchNote, setFetchNote] = useState("");              // message shown under the badge after fetching
   const [uploadingImage, setUploadingImage] = useState(false); // true while the fetched image goes to Cloudinary
   const runId = useRef(0);                                     // identifies the latest Fetch so an old one cannot overwrite the form
+  const imageToken = useRef(0);                                // bumped whenever the user picks/removes a picture, so a late Cloudinary reply cannot bring an old one back
+  const fileInput = useRef(null);
   const blobUrl = useRef("");                                  // object URL of a picked file, revoked when replaced
 
   const step = phase === "success" ? 2 : phase === "confirm" ? 1 : 0;
@@ -76,15 +78,34 @@ export default function AddItemModal({ initialUrl = "", collections = [], watchl
     const file = e.target.files[0];
     if (!file) return;
 
+    // validate right away so the user is told now, not at save time
+    if (!/^image\/(jpeg|png|webp|gif|avif)$/i.test(file.type)) {
+      setSaveError("Please use a JPG, PNG, WEBP, GIF or AVIF image.");
+      e.target.value = "";
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setSaveError("Image must not exceed 5MB.");
+      e.target.value = "";
+      return;
+    }
+
+    imageToken.current++;            // cancels the fetched picture still uploading
     clearBlob();
     blobUrl.current = URL.createObjectURL(file);
     setSelectedImage(file);
+    setFetchedImage("");
+    setCloudImage("");
+    setUploadingImage(false);
     setPreviewImage(blobUrl.current);
     setSaveError("");
   };
 
   // clears the picked file AND the fetched one
   const removeImage = () => {
+    imageToken.current++;
+    if (fileInput.current) fileInput.current.value = "";   // lets the same file be picked again
+    setUploadingImage(false);
     clearBlob();
     setSelectedImage(null);
     setFetchedImage("");
@@ -141,21 +162,23 @@ export default function AddItemModal({ initialUrl = "", collections = [], watchl
       if (info.name && !info.price) notes.push("Pixie found the name but not the price. Please type the current price.");
 
       if (info.image) {
+        const myImage = imageToken.current;
+        const stale = () => isCancelled() || imageToken.current !== myImage;   // user picked/removed a picture meanwhile
         setFetchedImage(info.image);
         setPreviewImage(info.image);     // shows the picture straight away
         setUploadingImage(true);
         try {
           const uploaded = await uploadImageFromUrl(info.image);   // -> Cloudinary
-          if (isCancelled()) return;
+          if (stale()) return;
           setCloudImage(uploaded);
           setPreviewImage(uploaded);     // from now on the preview is the Cloudinary copy
         } catch (error) {
-          if (isCancelled()) return;
-          notes.push(`The product image could not be saved to Cloudinary (${error.message}). You can upload one yourself.`);
-          setFetchedImage("");
-          setPreviewImage("");
+          if (stale()) return;
+          // keep the shop's picture address so the item still gets an image
+          setCloudImage(info.image);
+          notes.push(`The product image could not be copied to Cloudinary (${error.message}); the shop's own image link will be used instead.`);
         } finally {
-          if (!isCancelled()) setUploadingImage(false);
+          if (!stale()) setUploadingImage(false);
         }
       } else if (info.name) {
         notes.push("No product image was found. You can upload one yourself.");
@@ -323,7 +346,7 @@ export default function AddItemModal({ initialUrl = "", collections = [], watchl
                 <div className="ai-image__thumb ai-image__thumb--empty" aria-hidden="true">No image</div>
               )}
               <div className="ai-image__side">
-                <input id="ai-image" className="ai-input" type="file" accept="image/*" onChange={handleImageChange} />
+                <input id="ai-image" ref={fileInput} className="ai-input" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={handleImageChange} />
                 {previewImage && (
                   <button type="button" className="ai-image__remove" onClick={removeImage}>Remove image</button>
                 )}

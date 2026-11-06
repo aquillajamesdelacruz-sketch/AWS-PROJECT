@@ -11,17 +11,25 @@ const send = async (fileOrUrl) => {
 
   const formData = new FormData();
   formData.append("file", fileOrUrl);
-  formData.append("upload_preset", UPLOAD_PRESET); // must be an UNSIGNED preset
+  formData.append("upload_preset", UPLOAD_PRESET.trim()); // must be an UNSIGNED preset
 
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30000);   // never hang forever
   let response;
   try {
-    response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+    response = await fetch(`https://api.cloudinary.com/v1_1/${encodeURIComponent(CLOUD_NAME.trim())}/image/upload`, {
       method: "POST",
       body: formData,
+      signal: controller.signal,
     });
-  } catch {
-  
-    throw new Error("Could not reach Cloudinary. Check your internet connection.");
+  } catch (error) {
+    throw new Error(
+      error.name === "AbortError"
+        ? "The upload took too long. Try a smaller image."
+        : "Could not reach Cloudinary. Check your internet connection."
+    );
+  } finally {
+    clearTimeout(timer);
   }
 
   // changed: read the body safely, an error page is not always JSON
@@ -32,6 +40,7 @@ const send = async (fileOrUrl) => {
   }
 
   // Return Cloudinary image URL
+  if (!data.secure_url) throw new Error("Cloudinary did not return an image address.");
   return data.secure_url;
 };
 
@@ -43,8 +52,9 @@ export const uploadImage = async (file) => {
   }
 
   // Check image format
-  if (!file.type.startsWith("image/")) {
-    throw new Error("Please select a valid image.");
+  // browsers cannot show HEIC/TIFF, so only accept formats that display everywhere
+  if (!/^image\/(jpeg|png|webp|gif|avif)$/i.test(file.type)) {
+    throw new Error("Please use a JPG, PNG, WEBP, GIF or AVIF image.");
   }
 
   // Limit image size to 5MB

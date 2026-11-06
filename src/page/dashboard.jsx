@@ -1,3 +1,4 @@
+import { sendPriceDropEmail } from "../lib/priceAlert.js";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "./dashboard.css";
@@ -229,7 +230,17 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
       }
 
       await updateItem(user.uid, id, updatedData);
-  
+
+      // added: email alert when the price DROPPED (only if the user switched "Email alerts" on in Settings).
+      // A failed email must never make saving the item fail, so errors are only logged.
+      if (old && settings.emailAlerts && Number(updatedData.price) > 0 && Number(updatedData.price) < Number(old.price)) {
+        sendPriceDropEmail({
+          to: settings.email || user.email,
+          item: { ...old, ...updatedData },
+          oldPrice: Number(old.price),
+          newPrice: Number(updatedData.price),
+        }).catch((error) => console.warn("Price drop email not sent:", error.message));
+      }
       };
   
       // deleteItem
