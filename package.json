@@ -7,15 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "test:ui": "playwright test",
-    "server": "node server/index.js",
-    "start:server": "node server/index.js"
+    "preview": "vite preview"
   },
   "dependencies": {
-    "canvas-confetti": "^1.9.4",
-    "celebrate": "^16.0.0",
-    "ci": "^2.3.0",
     "firebase": "^13.2.0",
     "lucide": "^1.70.0",
     "lucide-react": "^1.70.0",
