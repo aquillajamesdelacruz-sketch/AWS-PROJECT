@@ -213,25 +213,21 @@ async function readProduct(link) {
   if (hit && Date.now() - hit.at < CACHE_MS) return hit.data;
 
   let result = null;
-  const why = { mode: MODE };            // what each strategy did, so failures are visible instead of silent
+  let httpError = null;
   if (MODE !== "browser") {
-    try { result = await readWithHttp(link); why.http = result.price ? "found price" : "page read, no price"; }
-    catch (error) { why.http = error.message; }
+    try { result = await readWithHttp(link); } catch (error) { httpError = error; }
   }
   if (MODE !== "http" && (!result || !result.price)) {
     try {
       const viaBrowser = await readWithBrowser(link);
-      why.browser = viaBrowser.price ? "found price" : "page read, no price";
       result = { ...viaBrowser, name: viaBrowser.name || result?.name || "", image: viaBrowser.image || result?.image || "" };
-    } catch (error) { why.browser = error.message; }
+    } catch (error) {
+      if (!result) throw error;       // nothing from either path
+    }
   }
-  console.log("[productInfo]", link, JSON.stringify(why));
-  if (!result) {
-    const err = new Error(`Could not read the page. http: ${why.http ?? "skipped"}; browser: ${why.browser ?? "skipped"}.`);
-    throw err;
-  }
+  if (!result) throw httpError || new Error("The marketplace did not return a response.");
 
-  const data = { ...result, priceFound: result.price > 0, debug: why };
+  const data = { ...result, priceFound: result.price > 0 };
   if (data.priceFound) {
     if (cache.size > 200) cache.delete(cache.keys().next().value);
     cache.set(link, { at: Date.now(), data });

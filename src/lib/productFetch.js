@@ -1,3 +1,4 @@
+
 import { validateProductUrl } from "./validation/schemas.js";
 
 const API_URL = import.meta.env.VITE_PRODUCT_API_URL || "";
