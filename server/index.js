@@ -1,6 +1,6 @@
 // Local marketplace metadata reader.
 // Run with: npm run server
-// Uses Node's built-in HTTP server and fetch; no Firebase Blaze plan is needed.
+// Uses Node's built-in HTTP server. Tries a plain fetch first, then a real Chromium browser (Playwright).
 import http from "node:http";
 
 const PORT = Number(process.env.PORT || process.env.PRODUCT_SERVER_PORT || 3001);
@@ -81,12 +81,28 @@ const allowed = (value) => {
   try { const parsed = new URL(value); return /^https?:$/.test(parsed.protocol) && HOSTS.some((pattern) => pattern.test(parsed.hostname)); }
   catch { return false; }
 };
-async function readProduct(link) {
+// ---------- shared extraction (works on HTML from plain fetch OR from the rendered Playwright page) ----------
+const BLOCKED_TITLE = /^(shopee|lazada|amazon|tiktok)[^a-z0-9]*(philippines|ph|\.com)?$|access denied|robot|captcha|just a moment|verify|security check/i;
+function extractAll(html, base) {
+  const structured = fromJsonLd(html);
+  const embedded = fromEmbeddedJson(html);
+  // Most trustworthy first: JSON-LD, then meta tags, and only then the loose "search all page JSON" guess.
+  const name = structured.name || meta(html, "og:title") || meta(html, "twitter:title") || embedded.name
+    || decode((html.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1] || "").trim();
+  const image = absolute(structured.image || meta(html, "og:image") || meta(html, "twitter:image") || embedded.image, base);
+  const metadataPrice = [meta(html, "product:price:amount"), meta(html, "og:price:amount"), meta(html, "twitter:data1"), meta(html, "price")].map(num).find((v) => v > 0) || 0;
+  const price = structured.price || metadataPrice || embedded.price || 0;
+  const original = structured.original || embedded.original || 0;
+  return { name: decode(name).replace(/\s+/g, " ").trim(), price, original, image };
+}
+
+// ---------- 1) plain HTTP read (fast, cheap; often blocked by marketplaces) ----------
+async function readWithHttp(link) {
   let target = link;
   let response;
   for (let i = 0; i < 5; i++) {
     response = await fetch(target, {
-      redirect: "manual", signal: AbortSignal.timeout(15000),
+      redirect: "manual", signal: AbortSignal.timeout(8000),
       headers: { "user-agent": UA, "accept": "text/html,application/xhtml+xml", "accept-language": "en-PH,en;q=0.9" },
     });
     const location = response.headers.get("location");
@@ -100,16 +116,127 @@ async function readProduct(link) {
   if (!response) throw new Error("The marketplace did not return a response.");
   if (!response.ok) throw new Error(`The marketplace returned HTTP ${response.status}.`);
   const html = (await response.text()).slice(0, 2500000);
-  const structured = fromJsonLd(html);
-  const embedded = fromEmbeddedJson(html);
-  const name = structured.name || embedded.name || meta(html, "og:title") || meta(html, "twitter:title") || decode((html.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1] || "").trim();
-  const image = absolute(structured.image || embedded.image || meta(html, "og:image") || meta(html, "twitter:image"), target);
-  const metadataPrice = [meta(html, "product:price:amount"), meta(html, "og:price:amount"), meta(html, "twitter:data1"), meta(html, "price")].map(num).find((value) => value > 0) || 0;
-  const price = structured.price || embedded.price || metadataPrice;
-  const original = structured.original || embedded.original || 0;
-  const cleanName = decode(name).replace(/\s+/g, " ").trim();
-  if (/^(shopee|lazada|amazon|tiktok)[^a-z0-9]*(philippines|ph|\.com)?$|access denied|robot|captcha|just a moment/i.test(cleanName)) throw new Error("The marketplace did not expose product details to the reader.");
-  return { name: cleanName, price, original, image, sourceUrl: target, priceFound: price > 0 };
+  const data = extractAll(html, target);
+  if (BLOCKED_TITLE.test(data.name)) throw new Error("The marketplace did not expose product details to the reader.");
+  return { ...data, sourceUrl: target };
+}
+
+// ---------- 2) real browser read with Playwright (runs the page's JavaScript) ----------
+const BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+const MAX_PAGES = Number(process.env.PLAYWRIGHT_CONCURRENCY || 1);   // keep at 1 on small servers: Chromium is memory hungry
+let browserPromise = null;
+let active = 0;
+const waiting = [];
+const acquire = () => new Promise((resolve) => { const go = () => { active++; resolve(); }; active < MAX_PAGES ? go() : waiting.push(go); });
+const release = () => { active--; waiting.shift()?.(); };
+
+function getBrowser() {
+  if (!browserPromise) {
+    browserPromise = import("playwright").then(({ chromium }) => chromium.launch({
+      headless: true,
+      channel: process.env.PRODUCT_BROWSER_CHANNEL || undefined,   // e.g. "chrome" to use the Chrome already installed on your PC
+      args: ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+    }));
+    browserPromise.then((b) => b.on("disconnected", () => { browserPromise = null; })).catch(() => { browserPromise = null; });
+  }
+  return browserPromise;
+}
+
+// Runs INSIDE the page. Last resort: find ₱ amounts on screen. The biggest non-struck one is the current price;
+// a struck-through one is the original price.
+function scrapeVisiblePrices() {
+  const re = /^(?:₱|PHP|Php)\s?([0-9][0-9,]*(?:\.[0-9]{1,2})?)(?:\s?[-–]\s?(?:₱|PHP|Php)?\s?[0-9][0-9,]*(?:\.[0-9]{1,2})?)?$/;
+  let price = null, original = null;
+  for (const el of document.body.querySelectorAll("*")) {
+    if (el.closest("header, footer, nav, script, style")) continue;
+    const text = (el.textContent || "").trim();
+    if (text.length > 30) continue;
+    const m = text.match(re);
+    if (!m) continue;
+    const value = Number(m[1].replace(/,/g, ""));
+    const style = getComputedStyle(el);
+    const size = parseFloat(style.fontSize) || 0;
+    if (!(value > 0)) continue;
+    if (style.textDecorationLine.includes("line-through")) { if (!original) original = value; continue; }
+    if (!price || size > price.size) price = { value, size };
+  }
+  return { price: price ? price.value : 0, original: original || 0 };
+}
+
+async function readWithBrowser(link) {
+  await acquire();
+  let context;
+  try {
+    const browser = await getBrowser();
+    context = await browser.newContext({
+      userAgent: BROWSER_UA, locale: "en-PH", timezoneId: "Asia/Manila",
+      viewport: { width: 1366, height: 900 },
+      extraHTTPHeaders: { "accept-language": "en-PH,en;q=0.9" },
+    });
+    // Product name, price and image address are in the HTML/meta; the pictures themselves are not needed.
+    await context.route("**/*", (route) => ["image", "media", "font"].includes(route.request().resourceType()) ? route.abort() : route.continue());
+    const page = await context.newPage();
+    page.setDefaultTimeout(30000);
+    await page.goto(link, { waitUntil: "domcontentloaded", timeout: 30000 });
+    await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});   // let the price script finish
+    const finalUrl = page.url();
+    if (!allowed(finalUrl)) throw new Error("The product link redirects outside supported marketplaces.");
+
+    const html = (await page.content()).slice(0, 2500000);
+    const data = extractAll(html, finalUrl);
+    if (!data.name) data.name = (await page.title().catch(() => "")).trim();
+    if (BLOCKED_TITLE.test(data.name)) throw new Error("The marketplace showed a bot-check page instead of the product.");
+
+    if (!data.price) {
+      const seen = await page.evaluate(scrapeVisiblePrices).catch(() => null);
+      if (seen?.price) { data.price = seen.price; data.original ||= seen.original; }
+    }
+    return { ...data, sourceUrl: finalUrl };
+  } catch (error) {
+    if (/Cannot find package 'playwright'|Executable doesn't exist/i.test(error.message)) {
+      throw new Error("Playwright is not installed on the server (run: npm install playwright && npx playwright install chromium).");
+    }
+    throw error;
+  } finally {
+    await context?.close().catch(() => {});
+    release();
+  }
+}
+
+// ---------- 3) pick a strategy + small cache ----------
+const MODE = (process.env.PRODUCT_READER_MODE || "auto").toLowerCase();   // auto | http | browser
+const CACHE_MS = 10 * 60 * 1000;
+const cache = new Map();
+
+async function readProduct(link) {
+  const hit = cache.get(link);
+  if (hit && Date.now() - hit.at < CACHE_MS) return hit.data;
+
+  let result = null;
+  const why = { mode: MODE };            // what each strategy did, so failures are visible instead of silent
+  if (MODE !== "browser") {
+    try { result = await readWithHttp(link); why.http = result.price ? "found price" : "page read, no price"; }
+    catch (error) { why.http = error.message; }
+  }
+  if (MODE !== "http" && (!result || !result.price)) {
+    try {
+      const viaBrowser = await readWithBrowser(link);
+      why.browser = viaBrowser.price ? "found price" : "page read, no price";
+      result = { ...viaBrowser, name: viaBrowser.name || result?.name || "", image: viaBrowser.image || result?.image || "" };
+    } catch (error) { why.browser = error.message; }
+  }
+  console.log("[productInfo]", link, JSON.stringify(why));
+  if (!result) {
+    const err = new Error(`Could not read the page. http: ${why.http ?? "skipped"}; browser: ${why.browser ?? "skipped"}.`);
+    throw err;
+  }
+
+  const data = { ...result, priceFound: result.price > 0, debug: why };
+  if (data.priceFound) {
+    if (cache.size > 200) cache.delete(cache.keys().next().value);
+    cache.set(link, { at: Date.now(), data });
+  }
+  return data;
 }
 const server = http.createServer(async (req, res) => {
   const origin = req.headers.origin;

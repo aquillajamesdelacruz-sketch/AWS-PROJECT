@@ -1,13 +1,12 @@
 services:
   - type: web
     name: marketplace-product-reader
-    runtime: node
-    plan: free
-    buildCommand: "npm install"
-    startCommand: "npm run start:server"
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free            # Chromium needs RAM: if it crashes with out-of-memory, move to a paid plan
     healthCheckPath: /api/health
     envVars:
-      - key: NODE_VERSION
-        value: 22
       - key: ALLOWED_ORIGINS
-        sync: false
+        sync: false       # e.g. https://your-site.web.app,http://localhost:5173
+      - key: PLAYWRIGHT_CONCURRENCY
+        value: "1"

@@ -8,11 +8,13 @@
   "build": "vite build",
   "preview": "vite preview",
   "start:server": "node server/index.js",
-  "server": "node server/index.js"
+  "server": "node server/index.js",
+  "install:browsers": "playwright install chromium"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.4",
     "firebase": "^13.2.0",
+    "playwright": "^1.65.0",
     "lucide": "^1.70.0",
     "lucide-react": "^1.70.0",
     "react": "^19.3.1",

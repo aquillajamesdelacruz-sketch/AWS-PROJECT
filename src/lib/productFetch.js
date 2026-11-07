@@ -1,8 +1,7 @@
-
 import { validateProductUrl } from "./validation/schemas.js";
 
 const API_URL = import.meta.env.VITE_PRODUCT_API_URL || "";
-const TIMEOUT_MS = 20000;
+const TIMEOUT_MS = 70000;   // browser-based reading + a sleeping Render server can take a while
 
 const parseMoney = (value) => {
   if (value == null || value === "") return 0;
