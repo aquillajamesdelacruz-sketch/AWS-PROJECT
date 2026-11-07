@@ -4,34 +4,43 @@ const logger = require("firebase-functions/logger");
 
 setGlobalOptions({maxInstances: 10});
 
-// Only these shops may be read (stops the function being used as an open proxy).
+// Allow only supported marketplace domains. This endpoint reads public page
+// metadata only; it does not log in, bypass bot checks, or access private data.
 const HOSTS = [
   /(^|\.)shopee\.[a-z.]+$/i, /(^|\.)shp\.ee$/i,
   /(^|\.)lazada\.[a-z.]+$/i, /(^|\.)lzd\.co$/i,
   /(^|\.)amazon\.[a-z.]+$/i, /(^|\.)amzn\.(to|com|asia)$/i,
-  /(^|\.)tiktok\.com$/i,
+  /(^|\.)tiktok\.com$/i, /(^|\.)vt\.tiktok\.com$/i, /(^|\.)vm\.tiktok\.com$/i,
 ];
 
-const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
-  "(KHTML, like Gecko) Chrome/124.0 Safari/537.36";
-
-const decode = (s = "") => s
+const UA = "Mozilla/5.0 (compatible; ProductMetadataReader/1.0)";
+const decode = (s = "") => String(s)
     .replace(/&amp;/g, "&").replace(/&quot;/g, "\"").replace(/&#0?39;/g, "'")
     .replace(/&lt;/g, "<").replace(/&gt;/g, ">")
     .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
     .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(Number(d)));
 
-const num = (v) => Number(String(v ?? "").replace(/[^0-9.]/g, "")) || 0;
-
-// <meta property="og:title" content="..."> in either attribute order
-const meta = (html, key) => {
-  const a = new RegExp(`<meta[^>]+(?:property|name)=["']${key}["'][^>]*content=["']([^"']*)["']`, "i");
-  const b = new RegExp(`<meta[^>]+content=["']([^"']*)["'][^>]*(?:property|name)=["']${key}["']`, "i");
-  const m = html.match(a) || html.match(b);
-  return m ? decode(m[1]).trim() : "";
+const num = (v) => {
+  if (v && typeof v === "object") v = v.value ?? v.amount ?? v.price;
+  const parsed = Number(String(v ?? "").replace(/,/g, "").replace(/[^0-9.]/g, ""));
+  return Number.isFinite(parsed) ? parsed : 0;
 };
 
-// Walks every JSON-LD block looking for a schema.org Product
+// Read metadata independent of the order of property/name/content attributes.
+const meta = (html, key) => {
+  const tags = html.match(/<meta\b[^>]*>/gi) || [];
+  for (const tag of tags) {
+    const attr = (name) => {
+      const match = tag.match(new RegExp(`\\b${name}\\s*=\\s*["']([^"']*)["']`, "i"));
+      return match?.[1] || "";
+    };
+    if ([attr("property"), attr("name"), attr("itemprop")].some((v) => v.toLowerCase() === key.toLowerCase())) {
+      return decode(attr("content")).trim();
+    }
+  }
+  return "";
+};
+
 const fromJsonLd = (html) => {
   const out = {};
   const re = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
@@ -45,10 +54,10 @@ const fromJsonLd = (html) => {
       const img = [].concat(node.image || [])[0];
       out.image = out.image || (typeof img === "object" ? img?.url : img);
       const offers = [].concat(node.offers || []);
-      for (const o of offers) {
-        const price = o.price ?? o.lowPrice ?? o.priceSpecification?.price;
-        if (price && !out.price) out.price = num(price);
-        if (o.highPrice && !out.original) out.original = num(o.highPrice);
+      for (const offer of offers) {
+        const price = offer.price ?? offer.lowPrice ?? offer.priceSpecification?.price;
+        if (price != null && !out.price) out.price = num(price);
+        if (offer.highPrice != null && !out.original) out.original = num(offer.highPrice);
       }
     }
     Object.values(node).forEach((v) => typeof v === "object" && visit(v));
@@ -57,7 +66,44 @@ const fromJsonLd = (html) => {
     try {
       visit(JSON.parse(m[1].trim()));
     } catch {
-      // ignore broken blocks
+      // Ignore malformed structured-data blocks.
+    }
+  }
+  return out;
+};
+
+// Some marketplaces expose product data in JSON script blocks rather than JSON-LD.
+// Only use price values from structured page data; never guess a price from arbitrary text.
+const fromEmbeddedJson = (html) => {
+  const out = {};
+  const scripts = html.match(/<script\b[^>]*>([\s\S]*?)<\/script>/gi) || [];
+  const priceKeys = ["price", "currentPrice", "current_price", "salePrice", "sale_price", "lowPrice", "low_price"];
+  const visit = (node, depth = 0) => {
+    if (!node || typeof node !== "object" || depth > 12) return;
+    if (Array.isArray(node)) {
+      node.forEach((child) => visit(child, depth + 1));
+      return;
+    }
+    const title = node.name || node.title || node.productName || node.product_name;
+    const image = node.image || node.imageUrl || node.image_url || node.cover;
+    if (!out.name && typeof title === "string" && title.length > 3 && title.length < 500) out.name = title;
+    if (!out.image && typeof image === "string") out.image = image;
+    for (const key of priceKeys) {
+      if (!out.price && node[key] != null) out.price = num(node[key]);
+    }
+    if (!out.original) out.original = num(node.originalPrice ?? node.original_price ?? node.listPrice);
+    Object.values(node).forEach((child) => {
+      if (child && typeof child === "object") visit(child, depth + 1);
+    });
+  };
+
+  for (const script of scripts) {
+    const body = script.replace(/^<script\b[^>]*>/i, "").replace(/<\/script>$/i, "").trim();
+    if (!body || body.length > 1_500_000 || !/^\s*[\[{]/.test(body)) continue;
+    try {
+      visit(JSON.parse(body));
+    } catch {
+      // Not every script is JSON. Ignore scripts that cannot be parsed safely.
     }
   }
   return out;
@@ -81,42 +127,91 @@ const allowed = (u) => {
   }
 };
 
-exports.productInfo = onRequest({cors: true, timeoutSeconds: 20, memory: "256MiB"}, async (req, res) => {
+// Explicit CORS headers are used instead of relying only on the Functions
+// framework defaults. This is important when the React app runs on localhost.
+const setCorsHeaders = (req, res) => {
+  // This endpoint only reads public product-page metadata and returns no
+  // account-specific information, so wildcard origin access is appropriate.
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Content-Type");
+  res.set("Access-Control-Max-Age", "3600");
+  res.set("Vary", "Origin");
+};
+
+exports.productInfo = onRequest({cors: false, timeoutSeconds: 25, memory: "256MiB"}, async (req, res) => {
+  setCorsHeaders(req, res);
+
+  // Browsers may send a preflight request before the actual lookup.
+  if (req.method === "OPTIONS") return res.status(204).send("");
+  if (req.method !== "GET") return res.status(405).json({error: "Use GET for product lookup."});
   const link = String(req.query.url || "").trim();
-  if (!allowed(link)) return res.status(400).json({error: "Unsupported link."});
+  if (!allowed(link)) return res.status(400).json({error: "Unsupported marketplace product link."});
 
   try {
-    // follow redirects by hand so a redirect can never leave the allowed shops (short links, SSRF)
+    // Resolve short links carefully and reject redirects outside the marketplace allowlist.
     let target = link;
     let response;
     for (let i = 0; i < 5; i++) {
       response = await fetch(target, {
         redirect: "manual",
-        signal: AbortSignal.timeout(12000),
-        headers: {"user-agent": UA, "accept": "text/html,application/xhtml+xml", "accept-language": "en-PH,en;q=0.9"},
+        signal: AbortSignal.timeout(15000),
+        headers: {
+          "user-agent": UA,
+          "accept": "text/html,application/xhtml+xml",
+          "accept-language": "en-PH,en;q=0.9",
+        },
       });
       const next = response.headers.get("location");
       if (response.status >= 300 && response.status < 400 && next) {
         target = new URL(next, target).href;
-        if (!allowed(target)) return res.status(400).json({error: "Link redirects somewhere unsupported."});
+        if (!allowed(target)) return res.status(400).json({error: "The product link redirects outside supported marketplaces."});
         continue;
       }
       break;
     }
-    if (!response.ok) return res.status(502).json({error: `The shop answered ${response.status}.`});
+
+    if (!response) return res.status(502).json({error: "The marketplace did not return a response."});
+    if (!response.ok) {
+      return res.status(502).json({error: `The marketplace returned HTTP ${response.status}.`});
+    }
 
     const html = (await response.text()).slice(0, 2_000_000);
-    const ld = fromJsonLd(html);
+    const structured = fromJsonLd(html);
+    const embedded = fromEmbeddedJson(html);
 
-    const name = ld.name || meta(html, "og:title") || meta(html, "twitter:title") ||
+    const name = structured.name || embedded.name ||
+      meta(html, "og:title") || meta(html, "twitter:title") ||
       decode((html.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1] || "").trim();
-    const image = absolute(ld.image || meta(html, "og:image") || meta(html, "twitter:image"), target);
-    const price = ld.price || num(meta(html, "product:price:amount") || meta(html, "og:price:amount"));
 
-    res.set("Cache-Control", "public, max-age=300");
-    return res.json({name: decode(name), price, original: ld.original || 0, image});
+    const image = absolute(
+        structured.image || embedded.image || meta(html, "og:image") || meta(html, "twitter:image"),
+        target,
+    );
+
+    // Price precedence: Product JSON-LD, embedded product JSON, then explicit price metadata.
+    const metadataPrice = [
+      meta(html, "product:price:amount"),
+      meta(html, "og:price:amount"),
+      meta(html, "price"),
+    ].map(num).find((value) => value > 0) || 0;
+
+    const price = structured.price || embedded.price || metadataPrice;
+    const original = structured.original || embedded.original || 0;
+
+    res.set("Cache-Control", "public, max-age=180");
+    return res.json({
+      name: decode(name),
+      price,
+      original,
+      image,
+      sourceUrl: target,
+      priceFound: price > 0,
+    });
   } catch (error) {
-    logger.warn("productInfo failed", error);
-    return res.status(502).json({error: "Could not read that page."});
+    logger.warn("productInfo failed", {message: error.message});
+    return res.status(502).json({
+      error: "Could not read public product details from this page. The marketplace may require an approved integration or may not expose price metadata.",
+    });
   }
 });

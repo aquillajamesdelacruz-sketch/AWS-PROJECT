@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import "./DashboardHome.css";
+import { productImage } from "../lib/media.js";
+import Popover from "./Popover.jsx";
+import { useState } from "react";
 import { storeBreakdown, biggestDrop, topWatched, dropPercent, totalSaved, savedPercent, savingsTrend, trendPath, timeAgo } from "../lib/Dashboardstats.js";
 
 const peso = (n) => "₱" + Number(n).toLocaleString("en-PH", { minimumFractionDigits: 0 });
@@ -7,13 +8,13 @@ const peso = (n) => "₱" + Number(n).toLocaleString("en-PH", { minimumFractionD
 const today = () => new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 
 function Thumb({ image, alt, className = "" }) {
-  return image ? <img className={`dh-thumb ${className}`} src={image} alt={alt} />
+  return image ? <img className={`dh-thumb ${className}`} src={productImage(image,320)} alt={alt} loading="lazy" decoding="async" />
               : <span className={`dh-thumb dh-thumb--empty ${className}`} aria-hidden="true" />;
 }
 
 function CollectionIcon({ type }) {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       {type === "gift"
         ? <><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M5 12v9h14v-9M12 8c-2-4-6-3-5 0M12 8c2-4 6-3 5 0"/></>
         : <rect x="4" y="4" width="16" height="16" rx="3"/>}
@@ -23,27 +24,11 @@ function CollectionIcon({ type }) {
 
 // panel now shows real notifications.
 // saved in Firebase so it survives a refresh.
-export function Notifications({ notifications = [], readAt = 0, enabled = true, onMarkRead, onClose }) {
-  const ref = useRef(null);
-
-  useEffect(() => {
-    const away = (e) => {
-      if (ref.current && !ref.current.contains(e.target) && !e.target.closest('[aria-label="Notifications"]')) onClose();
-    };
-    const esc = (e) => e.key === "Escape" && onClose();
-    document.addEventListener("mousedown", away);
-    document.addEventListener("keydown", esc);
-    return () => { 
-
-      document.removeEventListener("mousedown", away); 
-      document.removeEventListener("keydown", esc); };
-      
-  }, [onClose]);
-
+export function Notifications({ notifications = [], readAt = 0, enabled = true, onMarkRead, onClose, onViewItem }) {
   return (
-    <div className="dh-notif" ref={ref} role="dialog" aria-label="Notifications">
+    <Popover className="dh-notif" onClose={onClose} label="Notifications">
       <div className="dh-notif__head">
-        <h2>Notifications</h2>
+        <h2 id="notifications-title">Notifications</h2>
         <button type="button" onClick={onMarkRead} disabled={!notifications.length}>Mark all as read</button>
       </div>
       {!enabled ? (
@@ -55,12 +40,12 @@ export function Notifications({ notifications = [], readAt = 0, enabled = true, 
           {notifications.map((n) => (
             <li key={n.id}>
               <span className="dh-notif__dot" style={{ background: n.at > readAt ? n.color : "#cbd5e1" }} />
-              <div><p>{n.text}</p><small>{timeAgo(n.at)}</small></div>
+              <button type="button" className="dh-notif__item" onClick={() => { if(n.itemId) onViewItem?.(n.itemId); onClose(); }}><span>{n.text}</span><small>{timeAgo(n.at)}</small></button>
             </li>
           ))}
         </ul>
       )}
-    </div>
+    </Popover>
   );
 }
 
@@ -105,8 +90,8 @@ export default function DashboardHome({ items = [], purchases = [], collections 
         <div className="dh-insights">
           <h2>Quick Insights</h2>
           <div className="dh-insights__row">
-            <div className="dh-stat"><span className="dh-stat__icon" /><p>Currently Tracking<br /><b>{items.length} {items.length === 1 ? "Item" : "Items"}</b></p></div>
-            <div className="dh-stat"><span className="dh-stat__icon" /><p>Currently Collecting<br /><b>{collections.length} {collections.length === 1 ? "Collection" : "Collections"}</b></p></div>
+            <div className="dh-stat"><span className="dh-stat__icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></span><p>Currently Tracking<br /><b>{items.length} {items.length === 1 ? "Item" : "Items"}</b></p></div>
+            <div className="dh-stat"><span className="dh-stat__icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m3 7 9-4 9 4-9 4-9-4Zm0 5 9 4 9-4M3 17l9 4 9-4"/></svg></span><p>Currently Collecting<br /><b>{collections.length} {collections.length === 1 ? "Collection" : "Collections"}</b></p></div>
           </div>
           <div className="dh-stores">
             Current Stores
@@ -161,7 +146,7 @@ export default function DashboardHome({ items = [], purchases = [], collections 
           {collections.map((c) => (
             <div className="dh-coll" key={c.id || c.name}>
               <div><CollectionIcon type="box" /><b>{c.name}</b><small>Target Total Price: <strong>{peso(c.goal)}</strong></small></div>
-              <div className="dh-bar" role="progressbar" aria-valuenow={Math.round(c.progress * 100)} aria-valuemin="0" aria-valuemax="100"><i style={{ width: `${c.progress * 100}%`, background: c.color }} /></div>
+              <div className="dh-bar" role="progressbar" aria-label={`${c.name} target progress`} aria-valuenow={Math.round(c.progress * 100)} aria-valuemin="0" aria-valuemax="100"><i style={{ width: `${c.progress * 100}%`, background: c.color }} /></div>
             </div>
           ))}
         </article>

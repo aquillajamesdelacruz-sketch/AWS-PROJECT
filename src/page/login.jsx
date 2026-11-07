@@ -1,24 +1,15 @@
+import GoogleIcon from "../component/GoogleIcon.jsx";
+import PageHead from "../component/PageHead.jsx";
 
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import "./login.css";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import logo from "../assets/Logo.png";
 import mascot from "../assets/Mascot.png";
 
-import { login, googleSignIn, ensureUserRecord } from "../lib/firebase.js";
+import { login, resetPassword, googleSignIn, ensureUserRecord } from "../lib/firebase.js";
 import { validateLogin, MESSAGES } from "../lib/validation/schemas.js";
 import { loginErrorMessage } from "../lib/validation/authErrors.js";
 
-function GoogleIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 48 48" aria-hidden="true">
-      <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/>
-      <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.2 5.5-4.7 7.2l7.6 5.9c4.4-4.1 6.9-10.1 6.9-17.6z"/>
-      <path fill="#FBBC05" d="M10.5 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.9-6.1z"/>
-      <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.3 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/>
-    </svg>
-  );
-}
 
 function EyeIcon({ off }) {
   return (
@@ -42,16 +33,18 @@ function EyeIcon({ off }) {
 
 const LogIn = ({ onLogin }) => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [form, setForm] = useState({
-    email: "",
+    email: location.state?.email || "",
     password: ""
   });
 
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const [show, setShow] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [success, setSuccess] = useState(location.state?.registered ? "Account ready. Sign in to continue." : "");
 
 
   // Handle input changes
@@ -70,6 +63,10 @@ const LogIn = ({ onLogin }) => {
 
     setError("");
     setSuccess("");
+
+    if (!form.email.trim() && !form.password) {
+      return setError(MESSAGES.auth.loginRequired);
+    }
 
     const problem = validateLogin(form);
     if (problem) return setError(problem);
@@ -91,6 +88,44 @@ const LogIn = ({ onLogin }) => {
       setError(loginErrorMessage(error));
     } finally {
       setLoading(false);
+    }
+  };
+
+
+  // Send a password-reset link to the email entered in the login form.
+  const handleForgotPassword = async () => {
+    setError("");
+    setSuccess("");
+
+    const email = form.email.trim();
+    if (!email) {
+      setError("Enter your email address above first.");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    setResetLoading(true);
+    try {
+      await resetPassword(email);
+      setSuccess("If an account exists for this email, a password-reset link has been sent. Check your inbox and spam folder.");
+    } catch (resetError) {
+      const code = resetError?.code || "";
+      if (code === "auth/invalid-email") {
+        setError("Please enter a valid email address.");
+      } else if (code === "auth/too-many-requests") {
+        setError("Too many attempts. Please wait a while before trying again.");
+      } else if (code === "auth/network-request-failed") {
+        setError("Network error. Check your internet connection and try again.");
+      } else if (code === "auth/operation-not-allowed") {
+        setError("Email/password sign-in is not enabled in Firebase Authentication.");
+      } else {
+        setError("Unable to send the reset email. Check your Firebase Authentication settings and try again.");
+      }
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -119,17 +154,18 @@ const LogIn = ({ onLogin }) => {
   };
 
   return (
-    <main className="li-page">
+    <>
+      <PageHead title="Log in" description="Sign in to PeekyFox to check your price watchlist, collections and savings." />
+      <main className="li-page">
       <div className="li-layout">
 
         {/* Left Section */}
         <section className="li-intro">
 
-          <h1 className="li-title">
-            Track your favorites
-            <br />
-            with <span className="li-title__accent">PIXIE!</span>
-          </h1>
+          <h2 className="li-title">
+            Your favorites.<br />
+            <span className="li-title__accent">Worth watching.</span>
+          </h2>
 
           <p className="li-sub">
             Track your favorites, catch price drops, and save more.
@@ -151,15 +187,15 @@ const LogIn = ({ onLogin }) => {
         {/* Login Card */}
         <section className="li-card" aria-labelledby="li-welcome">
 
-          <img
+          <Link className="li-brand" to="/" aria-label="PeekyFox home"><img
             className="li-card__logo"
             src={logo}
             alt="PeekyFox"
-          />
+          /></Link>
 
-          <h2 id="li-welcome" className="li-card__title">
+          <h1 id="li-welcome" className="li-card__title">
             Welcome back!
-          </h2>
+          </h1>
 
           <p className="li-card__sub">
             Sign in to keep an eye on your favorites.
@@ -212,9 +248,14 @@ const LogIn = ({ onLogin }) => {
                 Show password
               </button>
 
-              <a className="li-link" href="#forgot">
-                Forgot password?
-              </a>
+              <button
+                type="button"
+                className="li-link li-forgot"
+                onClick={handleForgotPassword}
+                disabled={resetLoading || loading}
+              >
+                {resetLoading ? "Sending link..." : "Forgot password?"}
+              </button>
 
             </div>
 
@@ -252,13 +293,9 @@ const LogIn = ({ onLogin }) => {
             </button>
 
             {/* Error Message */}
-            {error && (
-              <p className="li-error" role="alert">
-                {error}
-              </p>
-              
-              
-            )}
+            <div className="li-error-slot" aria-live="assertive">
+              {error && <p className="li-error" role="alert">{error}</p>}
+            </div>
             {/* Create Account */}
             <p className="li-new">
               New to PeekyFox?{" "}
@@ -274,12 +311,13 @@ const LogIn = ({ onLogin }) => {
 
       {/* Footer */}
       <footer className="li-footer">
-        <span>© 2026 PeekyFox</span>
-        <a href="#privacy">Privacy</a>
-        <a href="#help">Need help?</a>
+        <span>&copy; 2026 PeekyFox</span>
+        <Link to="/privacy">Privacy</Link>
+        <Link to="/help">Need help?</Link>
       </footer>
 
     </main>
+    </>
   );
 };
 

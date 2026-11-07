@@ -1,6 +1,5 @@
+import { CloseIcon } from "./Icons.jsx";
 import { useEffect, useState } from "react";
-import "./Watchlist.css";
-import "./Settings.css";
 import { Modal } from "./Watchlist.jsx";
 import { changePassword } from "../lib/firebase.js";
 import { validateStockThreshold, MESSAGES, MAX_STOCK, DEFAULT_STOCK_THRESHOLD } from "../lib/validation/schemas.js";
@@ -21,7 +20,7 @@ function Chips({ options, value, onChange, label }) {
   return (
     <div className="st-chips" role="radiogroup" aria-label={label}>
       {options.map(([key, text]) => (
-        <button key={key} type="button" role="radio" aria-checked={value === key} className={value === key ? "is-on" : ""} onClick={() => onChange(key)}>{text}</button>
+        <label key={key} className={value === key ? "is-on" : ""}><input type="radio" name={label} value={key} checked={value === key} onChange={() => onChange(key)} />{text}</label>
       ))}
     </div>
   );
@@ -32,6 +31,7 @@ function ChangePassword({ onClose, onDone }) {
   const [error, setError] = useState("");
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
+  const [confirming,setConfirming]=useState(false);
   const [saving, setSaving] = useState(false);   // added: disables the button while Firebase works
 
   // changed: really updates the Firebase password (re-checks the current password first)
@@ -42,12 +42,16 @@ function ChangePassword({ onClose, onDone }) {
     if (form.next !== form.confirm) return setError("New passwords don't match.");
     if (form.next === form.current) return setError("Pick a password that is different from the current one.");
 
+    setConfirming(true);
+  };
+  const savePassword = async () => {
     setSaving(true);
     try {
       await changePassword(form.current, form.next);
       onDone();
     } catch (err) {
       const wrong = ["auth/wrong-password", "auth/invalid-credential", "auth/invalid-login-credentials"];
+      setConfirming(false);
       setError(
         wrong.includes(err.code) ? "Your current password is incorrect."
         : err.code === "auth/too-many-requests" ? "Too many attempts. Please wait a bit and try again."
@@ -62,7 +66,7 @@ function ChangePassword({ onClose, onDone }) {
     <Modal onClose={onClose} className="wl-modal--md st-modal">
       <header className="wl-modal__head">
         <div><h2>Change password</h2><p className="wl-muted">Pick something you haven’t used before.</p></div>
-        <button type="button" className="wl-x" aria-label="Close" onClick={onClose}>×</button>
+        <button type="button" className="wl-x" aria-label="Close" onClick={onClose}><CloseIcon /></button>
       </header>
       <form onSubmit={submit}>
         <label className="wl-label" htmlFor="pw-cur">Current password</label>
@@ -77,11 +81,16 @@ function ChangePassword({ onClose, onDone }) {
           <button type="submit" className="wl-btn wl-btn--primary" disabled={saving}>{saving ? "Updating..." : "Update password"}</button>
         </div>
       </form>
+      {confirming && <Modal onClose={()=>setConfirming(false)} className="wl-modal--sm"><h2>Confirm password change</h2><p>Your current password will be verified before the new password is saved.</p><div className="wl-actions"><button className="wl-btn" disabled={saving} onClick={()=>setConfirming(false)}>Cancel</button><button className="wl-btn wl-btn--primary" disabled={saving} onClick={savePassword}>{saving?"Updating...":"Confirm change"}</button></div></Modal>}
     </Modal>
   );
 }
 
 export default function Settings({ userName, onNameChange, settings, onSettings, items, onDeleteAccount }) {
+  const [section,setSection]=useState("general");
+  const [editingName,setEditingName]=useState(false);
+  const [draftName,setDraftName]=useState(userName);
+  const [nameSaving,setNameSaving]=useState(false);
   const [deleteError, setDeleteError] = useState("");   // added: shown inside the delete modal
   const [deleting, setDeleting] = useState(false);
   const [pwOpen, setPwOpen] = useState(false);
@@ -130,17 +139,16 @@ export default function Settings({ userName, onNameChange, settings, onSettings,
 
   return (
     <div className="wl st">
-      <h1 className="st-title">Settings</h1>
+      <h1 className="st-title">Settings</h1><div className="wl-tabs" role="group" aria-label="Settings section">{["general","account"].map(key=><button key={key} type="button" aria-pressed={section===key} className={section===key?"is-on":""} onClick={()=>setSection(key)}>{key==="general"?"General settings":"Account settings"}</button>)}</div>
       {notice && <p className={`st-notice${noticeError ? " st-notice--error" : ""}`} role={noticeError ? "alert" : "status"}>{notice}</p>}
 
-      <section className="st-card">
-        <header className="st-head"><h2>Profile</h2><button type="button" className="st-btn" onClick={() => setPwOpen(true)}>Change password</button></header>
-        <div className="st-two">
-          <div><label className="st-label" htmlFor="st-name">Name</label><input id="st-name" className="st-input" value={userName} onChange={(e) => onNameChange(e.target.value)} autoComplete="name" /></div>
-          <div><label className="st-label" htmlFor="st-email">Email</label><input id="st-email" className="st-input" type="email" placeholder="Email address" value={settings.email} onChange={(e) => onSettings({ email: e.target.value })} autoComplete="email" /></div>
-        </div>
-      </section>
+      {section==="account" && <section className="st-card">
+        <header className="st-head"><h2>Account</h2><button type="button" className="st-btn" onClick={()=>setPwOpen(true)}>Change password</button></header>
+        <div className="st-profile-name"><strong>{userName}</strong><button className="st-btn st-profile-name__edit" type="button" aria-label="Edit display name" onClick={()=>{setDraftName(userName);setEditingName(true);}}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m4 20 4-1L20 7l-3-3L5 16l-1 4Z"/></svg></button></div><p className="wl-muted">{settings.email}</p>
+        {editingName && <form className="st-name-form" onSubmit={async e=>{e.preventDefault();if(!draftName.trim()) return;setNameSaving(true);try{await onNameChange(draftName.trim());setEditingName(false);flash("Display name saved.");}catch{flash("Could not save your name. Try again.",true);}finally{setNameSaving(false);}}}><label className="st-label" htmlFor="st-name">Display name</label><input id="st-name" className="st-input" value={draftName} onChange={e=>setDraftName(e.target.value)} autoComplete="name" required/><div className="wl-actions"><button type="button" className="st-btn" onClick={()=>setEditingName(false)}>Cancel</button><button className="st-btn" disabled={nameSaving || !draftName.trim()}>Confirm and save name</button></div></form>}
+      </section>}
 
+      {section==="general" && <>
       <section className="st-card">
         <h2>Notifications</h2>
         <div className="st-line"><span>In-app alerts</span><Switch label="In-app alerts" checked={settings.inApp} onChange={(v) => saveNotification({ inApp: v })} /></div>
@@ -162,6 +170,8 @@ export default function Settings({ userName, onNameChange, settings, onSettings,
         <div className="st-line"><span>Theme</span><Chips label="Theme" options={THEMES} value={settings.theme} onChange={(v) => onSettings({ theme: v })} /></div>
       </section>
 
+      </>}
+      {section==="account" && <>
       <section className="st-card">
         <h2>Danger zone</h2>
         <div className="st-danger">
@@ -170,6 +180,7 @@ export default function Settings({ userName, onNameChange, settings, onSettings,
         </div>
       </section>
 
+      </>}
       {pwOpen && <ChangePassword onClose={() => setPwOpen(false)} onDone={() => { setPwOpen(false); flash("Password updated."); }} />}
       {deleteOpen && (
         <Modal onClose={() => setDeleteOpen(false)} className="wl-modal--sm">

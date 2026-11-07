@@ -3,7 +3,7 @@ import { z } from "zod";
 // Every user-facing validation message lives here so the wording can be matched
 // to the test cases in ONE place.
 
-export const MAX_WATCHLIST_ITEMS = 50;
+export const MAX_WATCHLIST_ITEMS = 5;
 export const MAX_TARGET_PRICE = 10000;
 export const MAX_URL_LENGTH = 2048;
 export const MAX_SEARCH_LENGTH = 255;
@@ -58,14 +58,14 @@ export const MESSAGES = {
     failed: "Could not save notification preferences. Please try again.",
   },
   watchlist: {
-    limit: "Watchlist limit reached. You can track up to 50 items. Remove an item to add a new one.",
+    limit: `Watchlist limit reached. You can track up to ${MAX_WATCHLIST_ITEMS} items. Remove an item to add a new one.`,
   },
   auth: {
     required: "Please fill in all required fields.",
+    loginRequired: "Please enter your email and password.",
     emailRequired: "Email is required.",
     passwordRequired: "Password is required.",
     emailInvalid: "Please enter a valid email address.",
-    contactInvalid: "Enter a valid contact number.",
     passwordLength: "Password must be at least 8 characters.",
     passwordNumber: "Password must contain at least one number.",
     passwordSymbol: "Password must contain at least one symbol.",
@@ -105,6 +105,7 @@ const SUPPORTED_HOSTS = [
   /(^|\.)shopee\.[a-z.]+$/i,
   /(^|\.)shp\.ee$/i,
   /(^|\.)lazada\.[a-z.]+$/i,
+  /(^|\.)lzd\.co$/i,
   /(^|\.)amazon\.[a-z.]+$/i,
   /(^|\.)amzn\.(to|com|asia)$/i,
   /(^|\.)tiktok\.com$/i,
@@ -160,7 +161,6 @@ export const validateLogin = (form) => firstError(loginSchema, form);
 const requiredSchema = z.object({
   email: z.string().trim().min(1, MESSAGES.auth.required),
   fullName: z.string().trim().min(1, MESSAGES.auth.required),
-  contact: z.string().trim().min(1, MESSAGES.auth.required),
   password: z.string().min(1, MESSAGES.auth.required),
   confirm: z.string().min(1, MESSAGES.auth.required),
 });
@@ -175,7 +175,6 @@ export const signupSchema = z
   .object({
     email: emailRule(MESSAGES.auth.required),
     fullName: z.string().trim().min(1, MESSAGES.auth.required),
-    contact: z.string().trim().regex(/^[0-9+\s()-]{7,20}$/, MESSAGES.auth.contactInvalid),
     password: passwordSchema,
     confirm: z.string(),
   })

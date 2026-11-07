@@ -1,12 +1,5 @@
 @import url("https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap");
 
-:root {
-  --orange: #f97316;
-  --orange-deep: #c2410c;
-  --navy: #1e3a8a;
-  --ink: #0f172a;
-  --muted: #64748b;
-}
 
 * { box-sizing: border-box; }
 
@@ -20,7 +13,7 @@ body { margin: 0; font-family: "Nunito", system-ui, sans-serif; }
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  padding: clamp(16px, 8vh, 80px) clamp(20px, 3vw, 36px) clamp(8px, 3vh, 28px);
+  padding: 80px 32px 24px;
   background: linear-gradient(180deg, #fff8f1 0%, #fee9d6 55%, #fddcbd 100%);
   color: var(--ink);
 }
@@ -30,7 +23,7 @@ body { margin: 0; font-family: "Nunito", system-ui, sans-serif; }
   min-height: 0;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: clamp(24px, 4vw, 72px);
+  gap: 64px;
   align-items: center;
   max-width: 1280px;
   width: 100%;
@@ -47,9 +40,9 @@ body { margin: 0; font-family: "Nunito", system-ui, sans-serif; }
   line-height: 1.12;
   color: var(--navy);
 }
-.li-title__accent { color: #ea580c; }
+.li-title__accent { color: var(--orange-deep); }
 
-.li-sub { margin: 10px 0 0 6px; font-size: clamp(14px, 2.2vh, 20px); color: var(--muted); }
+.li-sub { margin: 8px 0 0 4px; font-size: clamp(14px, 2.2vh, 20px); color: var(--muted); }
 
 .li-stage {
   position: relative;
@@ -57,7 +50,7 @@ body { margin: 0; font-family: "Nunito", system-ui, sans-serif; }
   width: auto;
   max-width: 100%;
   aspect-ratio: 1 / 1.05;
-  margin-top: clamp(10px, 3vh, 28px);
+  margin-top: 24px;
 }
 .li-stage__circle {
   position: absolute;
@@ -86,24 +79,24 @@ body { margin: 0; font-family: "Nunito", system-ui, sans-serif; }
 .li-card {
   background: #fff;
   border-radius: 24px;
-  padding: clamp(14px, 4.4vh, 40px) clamp(24px, 6vw, 118px) clamp(14px, 5.6vh, 50px);
+  padding: 40px 128px 48px;
   text-align: center;
   box-shadow: 0 10px 30px rgba(194, 65, 12, .08);
 }
-.li-card__logo { height: clamp(32px, 5.3vh, 48px); width: auto; display: block; margin: 0 auto clamp(8px, 3vh, 28px); }
+.li-card__logo { height: clamp(32px, 5.3vh, 48px); width: auto; display: block; margin: 0 auto 24px; }
 .li-card__title { margin: 0; font-size: clamp(21px, 3.4vh, 31px); font-weight: 900; }
-.li-card__sub { margin: clamp(5px, 1.5vh, 14px) 0 clamp(12px, 4.2vh, 38px); font-size: clamp(12px, 1.55vh, 14px); color: var(--muted); }
+.li-card__sub { margin: 12px 0 40px; font-size: clamp(12px, 1.55vh, 14px); color: var(--muted); }
 
 .li-form { text-align: left; }
 
-.li-label { display: block; margin-bottom: clamp(4px, 1.1vh, 10px); font-size: clamp(11px, 1.35vh, 12px); font-weight: 800; }
+.li-label { display: block; margin-bottom: 8px; font-size: clamp(11px, 1.35vh, 12px); font-weight: 800; }
 
 .li-input {
   display: block;
   width: 100%;
   height: clamp(32px, 4.9vh, 44px);
-  margin-bottom: clamp(10px, 3.1vh, 28px);
-  padding: 0 14px;
+  margin-bottom: 24px;
+  padding: 0 12px;
   font: 600 15px "Nunito", sans-serif;
   color: var(--ink);
   background: #fff;
@@ -121,8 +114,8 @@ body { margin: 0; font-family: "Nunito", system-ui, sans-serif; }
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: calc(-1 * clamp(5px, 1.55vh, 14px));
-  margin-bottom: clamp(10px, 2.6vh, 22px);   /* space between the row and the Sign in button */
+  margin-top: calc(-1 * 12px);
+  margin-bottom: 24px;   /* space between the row and the Sign in button */
 }
 .li-show {
   display: inline-flex; align-items: center; gap: 8px;
@@ -135,16 +128,18 @@ body { margin: 0; font-family: "Nunito", system-ui, sans-serif; }
   color: var(--orange-deep); text-decoration: none;
 }
 .li-link:hover { text-decoration: underline; }
+.li-forgot { padding: 0; border: 0; background: transparent; cursor: pointer; font-family: inherit; }
+.li-forgot:disabled { opacity: .6; cursor: wait; }
 
 .li-divider {
-  display: flex; align-items: center; gap: 14px;
-  margin: clamp(12px, 4.4vh, 40px) 0 clamp(10px, 2.9vh, 26px);
+  display: flex; align-items: center; gap: 12px;
+  margin: 40px 0 24px;
   font-size: 11px; color: var(--ink);
 }
 
 .li-divider2{
-  display: flex; align-items: center; gap: 14px;
-  margin: clamp(12px, 4.4vh, 40px)clamp(12px, 4.4vh, 4px);
+  display: flex; align-items: center; gap: 12px;
+  margin: 40px 4px;
   font-size: 11px; color: var(--ink);
 }
 
@@ -153,13 +148,13 @@ body { margin: 0; font-family: "Nunito", system-ui, sans-serif; }
 }
 
 .li-google, .li-submit {
-  display: flex; align-items: center; justify-content: center; gap: 10px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
   width: 100%; height: clamp(32px, 4.9vh, 44px); cursor: pointer;
   font: 800 13px "Nunito", sans-serif; border-radius: 8px;
   transition: transform .15s, background .15s, box-shadow .15s;
 }
 .li-google {
-  margin-bottom: clamp(7px, 1.8vh, 16px); color: var(--ink);
+  margin-bottom: 16px; color: var(--ink);
   background: #fff; border: 1px solid #e5e7eb;
 }
 .li-google:hover { box-shadow: 0 2px 8px rgba(0, 0, 0, .08); }
@@ -170,7 +165,7 @@ body { margin: 0; font-family: "Nunito", system-ui, sans-serif; }
 }
 .li-submit:hover { background: #ea6a0a; transform: translateY(-1px); }
 
-.li-new { margin: clamp(7px, 1.55vh, 14px) 0 0; text-align: center; font-size: 12px; color: var(--muted); }
+.li-new { margin: 12px 0 0; text-align: center; font-size: 12px; color: var(--muted); }
 
 button:focus-visible, a:focus-visible {
   outline: 3px solid var(--navy); outline-offset: 2px;
@@ -179,29 +174,30 @@ button:focus-visible, a:focus-visible {
 /* ---------- Footer ---------- */
 .li-footer {
   flex: none;
-  display: flex; justify-content: center; gap: 22px;
-  margin-top: clamp(6px, 2.4vh, 24px); font-size: 11px; color: var(--ink);
+  display: flex; justify-content: center; gap: 24px;
+  margin-top: 24px; font-size: 11px; color: var(--ink);
 }
 .li-footer a { color: inherit; text-decoration: none; }
 .li-footer a:hover { text-decoration: underline; }
 
 /* ---------- Messages ---------- */
+.li-error-slot { min-height: 52px; margin: -4px 0 12px; }
 .li-error {
-  margin: -4px 0 clamp(8px, 1.6vh, 14px); padding: clamp(6px, 1.1vh, 10px) 12px; border-radius: 8px;
+  margin: 0; padding: 8px 12px; border-radius: 8px;
   background: #fff1ee; color: #b91c1c; font-size: 12px; font-weight: 700; line-height: 1.4;
 }
 .li-success {
-  margin: -4px 0 clamp(8px, 1.6vh, 14px); padding: clamp(6px, 1.1vh, 10px) 12px; border-radius: 8px;
-  background: #ecfdf3; color: #15803d; font-size: 12px; font-weight: 700; line-height: 1.4;
+  margin: -4px 0 12px; padding: 8px 12px; border-radius: 8px;
+  background: #ecfdf3; color: var(--success); font-size: 12px; font-weight: 700; line-height: 1.4;
 }
 
 /* ---------- Smaller screens ---------- */
 @media (max-width: 960px) {
   /* Narrow window: show just the card so it still fits on one screen */
-  .li-page { padding-top: clamp(12px, 4vh, 40px); }
+  .li-page { padding-top: 40px; }
   .li-layout { grid-template-columns: 1fr; max-width: 520px; align-content: center; }
   .li-intro { display: none; }
-  .li-card { padding-left: clamp(20px, 6vw, 48px); padding-right: clamp(20px, 6vw, 48px); }
+  .li-card { padding-left: 48px; padding-right: 48px; }
 }
 
 /* Very short or very narrow windows can't fit everything, so let the page scroll instead of cutting it off */

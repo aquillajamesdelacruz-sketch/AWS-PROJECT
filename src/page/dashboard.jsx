@@ -1,8 +1,13 @@
+import Popover from "../component/Popover.jsx";
+import PageHead from "../component/PageHead.jsx";
+import { inCollection } from "../lib/memberships.js";
+import { CloseIcon } from "../component/Icons.jsx";
+import Dialog from "../component/Dialog.jsx";
+import { celebrate } from "../lib/celebrate.js";
 import { sendPriceDropEmail, emailAlertsConfigured } from "../lib/priceAlert.js";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import "./dashboard.css";
-import "../styles/Theme.css";
+import { Settings as SettingsIcon } from "lucide-react";
 import logo from "../assets/Logo.png";
 import mascot from "../assets/Mascot.png";
 import peek from "../assets/peek.png";
@@ -10,7 +15,7 @@ import find from "../assets/find.png";
 import stocks from "../assets/stocks.png";
 import sleep from "../assets/sleep.png";
 import AddItemModal from "../component/AddItemModal.jsx";
-import { validateWatchlistCount, validateNotificationPatch, NOTIFICATION_KEYS, MESSAGES, DEFAULT_STOCK_THRESHOLD } from "../lib/validation/schemas.js";
+import { validateWatchlistCount, validateNotificationPatch, NOTIFICATION_KEYS, MESSAGES, DEFAULT_STOCK_THRESHOLD, MAX_WATCHLIST_ITEMS } from "../lib/validation/schemas.js";
 import Watchlist from "../component/Watchlist.jsx";
 import Collection from "../component/Collection.jsx";
 import BoughtSavings from "../component/BoughtSavings.jsx";
@@ -22,18 +27,17 @@ import DashboardHome, { Notifications } from "../component/DashboardHome.jsx";
 import { onAuthStateChanged } from "firebase/auth";
 import {
   auth, addItem, listenItems, updateItem, deleteItem,
-  addCollection, listenCollections, deleteCollections, updateUser,
-  listenPurchases, markAsBought,
+  addCollection, listenCollections, deleteCollections, updateCollection, addCollectionMembers, updateUser,
+  listenPurchases, markAsBought, restorePurchase,
   listenSettings, saveSettings, deleteAccount, logout
 } from "../lib/firebase.js";
 
 const Icon = ({ children }) => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
     strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     {children}
   </svg>
 );
-
 const NAV = [
   { label: "Dashboard", icon: <><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></> },
   { label: "Watchlist", icon: <><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></> },
@@ -83,31 +87,33 @@ const loadTheme = () => {
   }
 };
 
-export default function Dashboard({ userName: initialName = "Bea Shainne", onDeleteAccount }) {
+export default function Dashboard({ userName: initialName = "Bea Shainne", onDeleteAccount, previewOnboarding = false }) {
   const navigate = useNavigate();
   const location = useLocation();
   const active = routeToView(location.pathname);
   const setActive = (label) => navigate(DASHBOARD_ROUTES[label] || "/dashboard");
   const [userName, setUserName] = useState(initialName);
+  const [prevInitialName, setPrevInitialName] = useState(initialName);
+  // Re-sync the copy when the authenticated profile (prop) changes — done
+  // during render per https://react.dev/learn/you-might-not-need-an-effect.
+  if (initialName !== prevInitialName) {
+    setPrevInitialName(initialName);
+    setUserName(initialName);
+  }
   const [settings, setSettings] = useState({ email: "", inApp: true, emailAlerts: false, frequency: "instant", stockThreshold: DEFAULT_STOCK_THRESHOLD, theme: loadTheme() });
   const firstName = userName.split(" ")[0];
   const initials = userName.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
   const STEPS = getSteps(firstName);
   const [step, setStep] = useState(0);
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(previewOnboarding);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [quickUrl, setQuickUrl] = useState("");
   const [collections, setCollections] = useState([]);
   const [focusId, setFocusId] = useState(null);
   const [logoutOpen, setLogoutOpen] = useState(false);
 
-  // Escape closes the log out confirmation
-  useEffect(() => {
-    if (!logoutOpen) return;
-    const onKey = (e) => e.key === "Escape" && setLogoutOpen(false);
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [logoutOpen]);
+
 
   const [items, setItems] = useState([]);
   const [purchases, setPurchases] = useState([]);   // added: bought items from Firebase (feeds the savings charts)
@@ -117,10 +123,6 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
     if (!knownPath) navigate("/dashboard", { replace: true });
   }, [location.pathname, navigate]);
 
-  // Keep the displayed user name in sync with the authenticated profile.
-  useEffect(() => {
-    setUserName(initialName);
-  }, [initialName]);
 
   // Light / Dark / Match device. The result is set on <html data-theme="light|dark"> (styles are in Theme.css).
   useEffect(() => {
@@ -140,12 +142,17 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
   const [notifOpen, setNotifOpen] = useState(false);
 
   const collectionNames = collections.map((c) => c.name);
-  const collectionSummaries = collections.map((c) => ({ ...c, ...statsFor(items.filter((i) => i.collection === c.name)) }));
+  const collectionSummaries = collections.map((c) => ({ ...c, ...statsFor(items.filter((i) => inCollection(i,c.name))) }));
 
   const openAdd = (url = "") => { setQuickUrl(url); setAddOpen(true); };
 
   const isLast = step === STEPS.length - 1;
-  const next = () => (isLast ? setOpen(false) : setStep(step + 1));
+  const closeOnboarding = () => {
+    setOpen(false);
+    const uid=auth.currentUser?.uid;
+    if(uid) { try { localStorage.setItem("peekyfox-onboarded-"+uid,"1"); } catch { /* storage unavailable */ } saveSettings(uid,{onboardingSeen:true}).catch(console.error); }
+  };
+  const next = () => (isLast ? closeOnboarding() : setStep(step + 1));
 
     // Listen for items AND collections in the database
       useEffect(() => {
@@ -170,9 +177,19 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
           unsubscribePurchases = listenPurchases(user.uid, setPurchases);
           // added: settings (email, alerts, frequency, theme, notification read time) are saved per user.
           // Defaults are kept for anything not saved yet; the email falls back to the login email.
-          unsubscribeSettings = listenSettings(user.uid, (saved) =>
-            setSettings((prev) => ({ ...prev, email: user.email || "", ...saved }))
-          );
+          let checkedOnboarding=false;
+          unsubscribeSettings = listenSettings(user.uid, (saved) => {
+            setSettings(prev=>({...prev,...saved,email:user.email || ""}));
+            if(!checkedOnboarding) {
+              checkedOnboarding=true;
+              let localSeen=false; try { localSeen=localStorage.getItem("peekyfox-onboarded-"+user.uid)==="1"; } catch { /* storage unavailable */ }
+              if(!saved.onboardingSeen && !localSeen) {
+                setOpen(true);
+                try { localStorage.setItem("peekyfox-onboarded-"+user.uid,"1"); } catch { /* storage unavailable */ }
+                saveSettings(user.uid,{onboardingSeen:true}).catch(console.error);
+              }
+            }
+          });
         } else {
           setItems([]);
           setCollections([]);
@@ -197,7 +214,7 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
         return;
       }
 
-      // watchlist limit: item 51 is rejected (the modal shows this message)
+      // Reject additions once the watchlist reaches its item limit.
       const limitError = validateWatchlistCount(items.length);
       if (limitError) throw new Error(limitError);
   
@@ -271,6 +288,7 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
     const user = auth.currentUser;
     if (!user) return;
     await markAsBought(user.uid, item, item.price);
+    celebrate();
   };
 
   // added: create a collection in Firebase (the listener above refreshes the UI)
@@ -288,18 +306,21 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
     await deleteCollections(user.uid, ids, names);
   };
 
-  // added: save the display name to users/{uid}. The screen updates instantly, but the database
-  // write waits 600 ms after the last keystroke so typing a name is not one write per letter.
-  const nameTimer = useRef(null);
-  const handleNameChange = (name) => {
+  const handleNameChange = async name => {
+    const user=auth.currentUser;
+    if(user) await updateUser(user.uid,name);
     setUserName(name);
-    clearTimeout(nameTimer.current);
-    nameTimer.current = setTimeout(() => {
-      const user = auth.currentUser;
-      if (user && name.trim()) updateUser(user.uid, name.trim()).catch(console.error);
-    }, 600);
   };
-  useEffect(() => () => clearTimeout(nameTimer.current), []);
+  const handleRenameCollection = async (collection, name) => {
+    if(auth.currentUser) await updateCollection(auth.currentUser.uid,collection.id,{name},collection.name);
+  };
+  const handleAddMembers = async (name, selectedItems) => {
+    if(auth.currentUser) await addCollectionMembers(auth.currentUser.uid,name,selectedItems);
+  };
+  const handleUndoPurchase = async purchase => {
+    const error=validateWatchlistCount(items.length); if(error) throw new Error(error);
+    if(auth.currentUser) await restorePurchase(auth.currentUser.uid,purchase);
+  };
 
   // added: any settings change is applied on screen at once and saved to users/{uid}/settings
   // Notification preferences are validated first: null / undefined / wrong types are rejected and nothing is changed.
@@ -341,11 +362,18 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
     }
   };
 
-  // Log out. The route guard redirects the signed-out user to the login page.
-  const handleLogout = () => logout().catch(console.error);
+  // Return signed-out users to the public landing page rather than the login screen.
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate("/", { replace: true });
+    } catch (error) {
+      console.error("Could not log out:", error);
+    }
+  };
   // Every Log out button asks first, so a slip doesn't sign you out
   const requestLogout = () => setLogoutOpen(true);
-  const confirmLogout = () => { setLogoutOpen(false); handleLogout(); };
+  const confirmLogout = () => { setLogoutOpen(false); void handleLogout(); };
 
   // added: notifications come from the user's real items; the unread count compares them with the saved read time
   const notifications = buildNotifications(items);
@@ -355,9 +383,11 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
   const tools = (
       <div className="db-top__tools">
         {/* changed: the search button now opens the Watchlist, which has the search box */}
-        <button type="button" className="db-iconbtn" aria-label="Search" onClick={() => setActive("Watchlist")}>
-          <Icon><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></Icon>
-        </button>
+        {active === "Dashboard" && (
+          <button type="button" className="db-iconbtn" aria-label="Search" onClick={() => setActive("Watchlist")}>
+            <Icon><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></Icon>
+          </button>
+        )}
         <button type="button" className="db-iconbtn" aria-label="Notifications" aria-expanded={notifOpen} onClick={() => setNotifOpen(!notifOpen)}>
           <Icon><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></Icon>
           {unread > 0 && <span className="db-badge" aria-label={`${unread} unread`}>{unread > 9 ? "9+" : unread}</span>}
@@ -369,15 +399,23 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
             enabled={settings.inApp}
             onMarkRead={() => handleSettings({ notifReadAt: Date.now() })}
             onClose={() => setNotifOpen(false)}
+            onViewItem={id => {setFocusId(id);setActive("Watchlist");}}
           />
         )}
-        <span className="db-avatar" aria-label={userName}>{initials}</span>
+        <button type="button" className="db-avatar" aria-label="Profile menu" aria-expanded={profileOpen} onClick={()=>{setProfileOpen(!profileOpen);setNotifOpen(false);}}>{initials}</button>
+        {profileOpen && <Popover label="Your profile" onClose={()=>setProfileOpen(false)}><strong>{userName}</strong><small>{settings.email}</small><button type="button" className="pf-menu-action" onClick={()=>{setProfileOpen(false);setActive("Settings");}}><SettingsIcon size={20} strokeWidth={1.8} aria-hidden="true" />Settings</button><button type="button" className="pf-menu-action pf-menu-action--danger" onClick={()=>{setProfileOpen(false);requestLogout();}}><Icon><path d="M10 17l5-5-5-5M15 12H3"/><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/></Icon>Log out</button></Popover>}
       </div>
   );
 
 
   return (
+    <>
+      <PageHead
+        title={active}
+        description="Your PeekyFox dashboard: track watchlist prices, organize collections, and see your savings."
+      />
     <div className="db-app">
+      <a className="skip-link" href="#main-content">Skip to content</a>
       {/* ---------- Sidebar ---------- */}
       <aside className="db-side">
         <img className="db-side__logo" src={logo} alt="PeekyFox" />
@@ -394,18 +432,6 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
           ))}
         </nav>
 
-        <p className="db-side__group">Preferences</p>
-        <button type="button" className={`db-nav${active === "Settings" ? " is-active" : ""}`} aria-current={active === "Settings" ? "page" : undefined} onClick={() => setActive("Settings")}>
-          <Icon><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></Icon>
-          Settings
-        </button>
-
-        {/* added: log out button (Firebase signOut) */}
-        <button type="button" className="db-nav db-nav--logout" onClick={requestLogout}>
-          <Icon><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></Icon>
-          Log out
-        </button>
-
         <div className="db-tip">
           <img className="db-tip__fox" src={peek} alt="" />
           <p>Pixie tip: Set a target price and I will cheer when it drops.</p>
@@ -414,7 +440,9 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
       </aside>
 
       {/* ---------- Main ---------- */}
-      <main className="db-main">
+      <main className={`db-main${["Watchlist", "Collection", "Bought and Savings", "Settings"].includes(active) ? " db-main--aligned-title" : ""}${active === "Watchlist" ? " db-main--watchlist" : ""}`} id="main-content" tabIndex={-1}>
+        <div className="db-route" key={active}>
+        {active !== "Dashboard" && <div className="db-utility-header">{tools}</div>}
         {active === "Watchlist" ? (
 
           // firebase added
@@ -429,7 +457,7 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
             onAdd={() => openAdd()}
           />
         ) : active === "Bought and Savings" ? (
-          <BoughtSavings purchases={purchases} tools={tools} />
+          <BoughtSavings purchases={purchases} onUndo={handleUndoPurchase} />
         ) : active === "Settings" ? (
           <Settings
             userName={userName}
@@ -444,8 +472,11 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
           <Collection
             items={items}
             collections={collections}
+            watchlistFull={items.length >= MAX_WATCHLIST_ITEMS}
             onAddItem={() => openAdd()}
             onCreate={handleCreateCollection}
+            onRename={handleRenameCollection}
+            onAddMembers={handleAddMembers}
             onDelete={handleDeleteCollections}
             onViewItem={(id) => { setFocusId(id); setActive("Watchlist"); }}
           />
@@ -478,12 +509,13 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
           )}
           </>
         )}
+        </div>
       </main>
 
       {/* added: on phones/tablets the sidebar is hidden, so this bottom bar is the navigation.
           Hidden on wide screens by Dashboard.css. */}
       <nav className="db-tabbar" aria-label="Main">
-        {[...NAV, { label: "Settings", icon: <><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></> }].map((n) => (
+        {NAV.map((n) => (
           <button key={n.label} type="button" className={active === n.label ? "is-active" : ""}
             aria-current={active === n.label ? "page" : undefined} onClick={() => setActive(n.label)}>
             <Icon>{n.icon}</Icon>
@@ -514,29 +546,27 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
 
       {/* ---------- Log out confirmation ---------- */}
       {logoutOpen && (
-        <div className="db-overlay db-overlay--top" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && setLogoutOpen(false)}>
-          <div className="db-confirm" role="alertdialog" aria-modal="true" aria-labelledby="db-logout-title" aria-describedby="db-logout-desc">
+        <Dialog onClose={() => setLogoutOpen(false)} overlayClassName="db-overlay db-overlay--top" className="db-confirm" role="alertdialog" labelledBy="db-logout-title" describedBy="db-logout-desc">
             <h2 id="db-logout-title">Log out?</h2>
             <p id="db-logout-desc">You’ll need to sign in again to see your watchlist.</p>
             <div className="db-confirm__actions">
               <button type="button" className="db-confirm__btn" autoFocus onClick={() => setLogoutOpen(false)}>Stay logged in</button>
               <button type="button" className="db-confirm__btn db-confirm__btn--primary" onClick={confirmLogout}>Log out</button>
             </div>
-          </div>
-        </div>
+        </Dialog>
       )}
 
       {/* ---------- Onboarding modal ---------- */}
       {open && (
-        <div className="db-overlay" role="presentation">
-          <div className="db-modal" role="dialog" aria-modal="true" aria-label="Meet Pixie">
-            <button type="button" className="db-modal__close" aria-label="Close" onClick={() => setOpen(false)}>×</button>
+        <Dialog onClose={closeOnboarding} overlayClassName="db-overlay" className="db-modal" labelledBy="onboarding-title">
+            <button type="button" className="db-modal__close" aria-label="Close" onClick={closeOnboarding}><CloseIcon /></button>
 
-            <ol className="db-steps" aria-label={`Step ${step + 1} of ${STEPS.length}`}>
-              {STEPS.map((_, i) => (
-                <li key={i} className={`db-step${i === step ? " is-current" : i < step ? " is-done" : ""}`}>{i + 1}</li>
-              ))}
-            </ol>
+            <div className="db-onboarding-progress">
+              <div className="db-onboarding-progress__label"><span>Getting started</span><span>Step {step + 1} of {STEPS.length}</span></div>
+              <div className="db-onboarding-progress__track" role="progressbar" aria-label="Getting started" aria-valuemin={0} aria-valuemax={STEPS.length} aria-valuenow={step + 1} aria-valuetext={`Step ${step + 1} of ${STEPS.length}`}>
+                <span className="db-onboarding-progress__fill" style={{ width: `${((step + 1) / STEPS.length) * 100}%` }} />
+              </div>
+            </div>
 
             <div className="db-modal__body">
               <div className="db-modal__stage">
@@ -544,15 +574,19 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
                 <span className="db-modal__shadow" />
               </div>
               <div className="db-modal__copy">
-                <h2>{STEPS[step].title}</h2>
-                <p>{STEPS[step].text}</p>
+                <h2 id="onboarding-title">{STEPS[step].title}</h2>
+                <p>{STEPS[step].text}</p><ul className="db-quickstart">{[
+ ["Save a product link to your watchlist.","Group items into collections.","Review price changes before buying."],
+ ["Choose Add item and paste a supported store link.","Review the fetched name, image, and price.","Set a target and save your item."],
+ ["Enable alerts in General settings.","Open a product to explore its price history.","Mark purchases as bought to track savings."]
+ ][step].map(t=><li key={t}>{t}</li>)}</ul>
               </div>
             </div>
 
             <button type="button" className="db-next" onClick={next}>{isLast ? "Get started" : "Next"}</button>
-          </div>
-        </div>
+        </Dialog>
       )}
     </div>
+    </>
   );
 }

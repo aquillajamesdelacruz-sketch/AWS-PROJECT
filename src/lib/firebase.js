@@ -1,3 +1,4 @@
+import { memberships } from "./memberships.js";
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAnalytics, isSupported } from "firebase/analytics";
@@ -6,10 +7,12 @@ import {
   GoogleAuthProvider,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  sendPasswordResetEmail,
   signInWithPopup,
   signOut,
   onAuthStateChanged,
   updatePassword,
+  updateProfile,
   reauthenticateWithCredential,
   EmailAuthProvider,
   deleteUser as deleteAuthUser,
@@ -47,27 +50,44 @@ export const db = getDatabase(app);
 export const auth = getAuth(app);
 export const provider = new GoogleAuthProvider();
 
-export const register = async (email, password, username, contactNumber) => {
+let registrationPending = false;
+export const register = async (email, password, username) => {
+  registrationPending = true;
+  try {
   const response = await createUserWithEmailAndPassword(auth, email, password);
 
   //this gets the users id 
   const user = response.user;
 
+  await updateProfile(user, { displayName: username });
   //save the other infos in the real time database
   await set(ref(db, "users/" + user.uid), {
     uid: user.uid,
     username: username,
     email: email,
-    contactNumber: contactNumber,
     createdAt: new Date().toISOString()
   });
 
   return response;
+  } finally {
+    try { await signOut(auth); } finally { registrationPending = false; }
+  }
 };
 
 export const login = async (email, password) => {
   const response = await signInWithEmailAndPassword(auth, email, password);
   return response;
+};
+
+// Send a Firebase Authentication password-reset email.
+export const resetPassword = async (email) => {
+  const normalizedEmail = String(email || "").trim();
+  if (!normalizedEmail) {
+    const error = new Error("Enter your email address first.");
+    error.code = "auth/missing-email";
+    throw error;
+  }
+  return sendPasswordResetEmail(auth, normalizedEmail);
 };
 
 export const googleSignIn = async () => {
@@ -84,7 +104,7 @@ export const logout = async () => {
 export const updateUser = async (uid, username, contactNumber) => {
   // added: Realtime Database rejects `undefined`, so only send the fields that were given
   const changes = {};
-  if (username !== undefined) changes.username = username;
+  if (username !== undefined) { changes.username = username; changes.nameEdited = true; }
   if (contactNumber !== undefined) changes.contactNumber = contactNumber;
   await update(ref(db, "users/" + uid), changes);
 };
@@ -191,8 +211,10 @@ export const updateCollection = async (uid, collectionId, updatedData, oldName) 
   if (oldName && updatedData.name && updatedData.name !== oldName) {
     const snap = await get(ref(db, `users/${uid}/items`));
     Object.values(snap.val() || {}).forEach((item) => {
-      if (item.collection === oldName) {
-        updates[`users/${uid}/items/${item.id}/collection`] = updatedData.name;
+      if (memberships(item).includes(oldName)) {
+        const names = memberships(item).map(name => name === oldName ? updatedData.name : name);
+        updates[`users/${uid}/items/${item.id}/collection`] = names[0] || "";
+        updates[`users/${uid}/items/${item.id}/collections`] = names;
       }
     });
   }
@@ -211,8 +233,10 @@ export const deleteCollections = async (uid, collectionIds, collectionNames = []
   if (collectionNames.length) {
     const snap = await get(ref(db, `users/${uid}/items`));
     Object.values(snap.val() || {}).forEach((item) => {
-      if (collectionNames.includes(item.collection)) {
-        updates[`users/${uid}/items/${item.id}/collection`] = "";
+      if (memberships(item).some(name => collectionNames.includes(name))) {
+        const names = memberships(item).filter(name => !collectionNames.includes(name));
+        updates[`users/${uid}/items/${item.id}/collection`] = names[0] || "";
+        updates[`users/${uid}/items/${item.id}/collections`] = names;
       }
     });
   }
@@ -229,6 +253,9 @@ export const markAsBought = async (uid, item, paid) => {
   const paidAmount = Number(paid) || Number(item.price) || 0;
 
   const purchase = {
+    sourceItem: item,
+    createdAt: item.createdAt || null,
+    history: item.history || [],
     id: purchaseRef.key,
     itemId: item.id,
     name: item.name,
@@ -267,7 +294,7 @@ export const deletePurchase = async (uid, purchaseId) => {
 // ========================================================================================= Session, profile and settings
 
 // Tells React when someone logs in or out
-export const watchAuth = (callback) => onAuthStateChanged(auth, callback);
+export const watchAuth = (callback) => onAuthStateChanged(auth, user => { if (!registrationPending || !user) callback(user); });
 
 // READ the profile saved by register
 export const getUserProfile = async (uid) => {
@@ -279,11 +306,18 @@ export const getUserProfile = async (uid) => {
 export const ensureUserRecord = async (user) => {
   const profileRef = ref(db, "users/" + user.uid);
   const snap = await get(profileRef);
-  if (snap.exists() && snap.val().username) return snap.val();
+  if (snap.exists() && snap.val().username) {
+    const saved = snap.val();
+    if (user.displayName && !saved.nameEdited && saved.username !== user.displayName) {
+      await update(profileRef, { username: user.displayName });
+      return { ...saved, username: user.displayName };
+    }
+    return saved;
+  }
 
   const profile = {
     uid: user.uid,
-    username: user.displayName || (user.email || "").split("@")[0] || "Friend",
+    username: user.displayName || "Friend",
     email: user.email || "",
     contactNumber: "",
     createdAt: new Date().toISOString()
@@ -321,4 +355,31 @@ export const deleteAccount = async () => {
   if (!user) return;
   await remove(ref(db, "users/" + user.uid));
   await deleteAuthUser(user);
+};
+
+export const registerWithGoogle = async () => {
+  registrationPending = true;
+  try {
+    const credential = await googleSignIn();
+    await ensureUserRecord(credential.user);
+    return credential.user.email || "";
+  } finally {
+    try { await signOut(auth); } finally { registrationPending = false; }
+  }
+};
+
+export const restorePurchase = async (uid, purchase) => {
+ const id = purchase.itemId || push(ref(db, `users/${uid}/items`)).key;
+ const existing = await get(ref(db, `users/${uid}/items/${id}`));
+ if (existing.exists()) throw new Error("This item is already in your watchlist.");
+ const restored = purchase.sourceItem || { name:purchase.name, price:purchase.paid, original:purchase.original, image:purchase.image || null, store:purchase.store || "", history:purchase.history || [], createdAt:purchase.createdAt || purchase.boughtAt, target:purchase.paid, alert:false };
+ await update(ref(db), { [`users/${uid}/items/${id}`]:{...restored,id}, [`users/${uid}/purchases/${purchase.id}`]:null });
+};
+export const addCollectionMembers = async (uid, name, items) => {
+ const changes = {};
+ items.forEach(item => {
+   changes[`users/${uid}/items/${item.id}/collections`] = [...new Set([...memberships(item),name])];
+   if (!item.collection) changes[`users/${uid}/items/${item.id}/collection`] = name;
+ });
+ if (items.length) await update(ref(db),changes);
 };

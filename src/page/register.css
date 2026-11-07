@@ -6,33 +6,27 @@
 /* Both sides sit in the vertical middle of the page (the form card is no longer stuck at the top) */
 .su .li-layout { align-items: center; }
 
-.su .li-card { padding: clamp(12px, 3.2vh, 30px) clamp(24px, 4vw, 64px) clamp(12px, 3.4vh, 32px); }
-.su .li-card__logo { height: clamp(28px, 4.4vh, 40px); margin-bottom: clamp(5px, 1.6vh, 14px); }
+.su .li-card { padding: 32px 64px 32px; }
+.su .li-card__logo { height: clamp(28px, 4.4vh, 40px); margin-bottom: 12px; }
 .su .li-card__title { font-size: clamp(19px, 3vh, 27px); }
-.su .li-card__sub { margin: clamp(3px, .9vh, 8px) 0 clamp(8px, 2.4vh, 20px); }
+.su .li-card__sub { margin: 8px 0 16px; }
 
-/* Two columns: Email on its own row, Name | Contact, then Password | Confirm.
-   (children order: 1-2 email, 3-4 name, 5-6 contact, 7-8 password, 9-10 confirm) */
-.su .li-form { display: grid; grid-template-columns: 1fr 1fr; column-gap: 16px; }
-.su .li-form > * { grid-column: 1 / -1; }
-.su .li-form > :nth-child(3)  { grid-column: 1; grid-row: 3; }
-.su .li-form > :nth-child(5)  { grid-column: 2; grid-row: 3; }
-.su .li-form > :nth-child(4)  { grid-column: 1; grid-row: 4; }
-.su .li-form > :nth-child(6)  { grid-column: 2; grid-row: 4; }
-.su .li-form > :nth-child(7)  { grid-column: 1; grid-row: 5; }
-.su .li-form > :nth-child(9)  { grid-column: 2; grid-row: 5; }
-.su .li-form > :nth-child(8)  { grid-column: 1; grid-row: 6; }
-.su .li-form > :nth-child(10) { grid-column: 2; grid-row: 6; }
-
-.su .li-label { margin-bottom: clamp(3px, .8vh, 8px); }
-.su .li-input { height: clamp(30px, 4.5vh, 42px); margin-bottom: clamp(7px, 2vh, 18px); }
+/* Name and email span the form; passwords share the final field row. */
+.su .li-form { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:0 16px; }
+.su .li-form > * { grid-column:1/-1; }
+.su .li-form > :nth-child(5) { grid-column:1; grid-row:5; }
+.su .li-form > :nth-child(6) { grid-column:1; grid-row:6; }
+.su .li-form > :nth-child(7) { grid-column:2; grid-row:5; }
+.su .li-form > :nth-child(8) { grid-column:2; grid-row:6; }
+.su .li-label { margin-bottom: 8px; }
+.su .li-input { height: clamp(30px, 4.5vh, 42px); margin-bottom: 16px; }
 .su .li-row { margin-top: 0; margin-bottom: 0; }   /* sign-up already spaces its button with .su-submit */
-.su .li-show { margin-top: clamp(0px, .4vh, 4px); }
-.su-error { margin: clamp(6px, 1.4vh, 12px) 0 0; }
-.su-submit { margin-top: clamp(8px, 2.2vh, 20px); }
-.su .li-new { margin-top: clamp(6px, 1.5vh, 14px); }
+.su .li-show { margin-top: 4px; }
+.su-error { margin: 12px 0 0; }
+.su-submit { margin-top: 16px; }
+.su .li-new { margin-top: 12px; }
 
 /* Phones: one field per row (the page then scrolls, see login.css) */
-@media (max-width: 560px) {
+@media (max-width: 360px) {
   .su .li-form { display: block; }
 }

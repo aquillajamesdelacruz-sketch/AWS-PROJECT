@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: marketplace-product-reader
+    runtime: node
+    plan: free
+    buildCommand: "npm install"
+    startCommand: "npm run start:server"
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: ALLOWED_ORIGINS
+        sync: false

@@ -1,6 +1,5 @@
+import { ProductModal } from "./Watchlist.jsx";
 import { useState } from "react";
-import "./Watchlist.css";
-import "./BoughtSavings.css";
 
 import { lastMonths, monthKey } from "../lib/Dashboardstats.js";
 
@@ -8,7 +7,7 @@ const peso = (n) => "₱" + Math.round(n).toLocaleString("en-PH");
 const sum = (list, key) => list.reduce((t, i) => t + i[key], 0);
 
 const Icon = ({ type }) => (
-  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     {type === "headphones" ? <><path d="M4 15v-3a8 8 0 0 1 16 0v3" /><rect x="3" y="14" width="4" height="6" rx="2" /><rect x="17" y="14" width="4" height="6" rx="2" /></>
       : type === "mat" ? <><rect x="3" y="4" width="18" height="6" rx="2.5" /><rect x="3" y="14" width="18" height="6" rx="2.5" /></>
       : <><path d="M5 8h14l-1 12H6L5 8z" /><path d="M9 8V6a3 3 0 0 1 6 0v2" /></>}
@@ -16,8 +15,9 @@ const Icon = ({ type }) => (
 );
 
 // changed: `purchases` now comes from Firebase (users/{uid}/purchases) instead of sample data.
-export default function BoughtSavings({ purchases = [], tools }) {
+export default function BoughtSavings({ purchases = [], tools, onUndo }) {
   const [showAll, setShowAll] = useState(false);
+  const [detail,setDetail]=useState(null);
 
   const totalSaved = sum(purchases, "saved");
   const totalSpent = sum(purchases, "paid");
@@ -53,8 +53,8 @@ export default function BoughtSavings({ purchases = [], tools }) {
             const last = i === monthly.length - 1;
             return (
               <div className="bs-col" key={x.m}>
-                {last && <b className="bs-val">{peso(x.v)}</b>}
-                <i style={{ height: `${Math.max(8, (x.v / max) * 143)}px` }} />
+                <b className="bs-val">{last ? peso(x.v) : ""}</b>
+                <div className="bs-plot"><i style={{ height: `${(x.v / max) * 100}%` }} /></div>
                 <span className={last ? "is-now" : ""}>{x.m}</span>
               </div>
             );
@@ -67,17 +67,18 @@ export default function BoughtSavings({ purchases = [], tools }) {
         {purchases.length === 0 && <p>No purchases yet. Open an item in your Watchlist and tap “Mark as bought”.</p>}
         <div className="bs-row bs-row--head"><span>ITEM</span><span>STORE</span><span>PAID</span><span>SAVED</span></div>
         {rows.map((p) => (
-          <div className="bs-row" key={p.id}>
+          <button type="button" className="bs-row bs-purchase" key={p.id} onClick={()=>setDetail(p)}>
             <span className="bs-item"><Icon /><b>{p.name}</b></span>
             <span className="bs-store">{p.store}</span>
             <span>Paid {peso(p.paid)}</span>
             <span className="bs-saved">Saved {peso(p.saved)}</span>
-          </div>
+          </button>
         ))}
         {purchases.length > 2 && (
           <button type="button" className="bs-more" onClick={() => setShowAll(!showAll)}>{showAll ? "Show fewer" : `Show all ${purchases.length} purchases`}</button>
         )}
       </section>
+      {detail && <ProductModal item={{...(detail.sourceItem || detail),price:detail.paid,target:detail.sourceItem?.target || detail.paid,original:detail.original}} purchase={detail} onClose={()=>setDetail(null)} onUndo={onUndo ? ()=>onUndo(detail) : undefined} />}
     </div>
   );
 }
