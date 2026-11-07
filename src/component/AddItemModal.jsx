@@ -30,6 +30,19 @@ const detectStore = (url) => {
 const parse = (v) => Number(String(v).replace(/[^0-9.]/g, "")) || 0;
 const peso = (n) => "₱" + parse(n).toLocaleString("en-PH");
 
+// Money inputs: keep only digits and ONE decimal point (max 2 decimals), so letters/symbols are ignored.
+const cleanMoney = (v) => {
+  const s = String(v).replace(/[^0-9.]/g, "");
+  const i = s.indexOf(".");
+  return i === -1 ? s : s.slice(0, i + 1) + s.slice(i + 1).replace(/\./g, "").slice(0, 2);
+};
+// What the box shows: automatic ₱ + thousands commas, while keeping a trailing "." or decimals the user is typing.
+const showMoney = (raw) => {
+  if (!raw) return "";
+  const [whole, dec] = raw.split(".");
+  return "₱" + (whole ? Number(whole).toLocaleString("en-PH") : "0") + (dec !== undefined ? "." + dec : "");
+};
+
 function StepLine({ on = false }) {
   return (
     <svg className={`ai-line${on ? " is-on" : ""}`} width="106" height="24" viewBox="0 0 106 24" fill="none" aria-hidden="true">
@@ -362,18 +375,18 @@ export default function AddItemModal({ initialUrl = "", collections = [], watchl
             <div className="ai-grid">
               <div>
                 <label className="ai-label" htmlFor="ai-price">Current price</label>
-                <input id="ai-price" className="ai-input" inputMode="decimal" value={price ? peso(price) : ""}
-                  onChange={(e) => setPrice(e.target.value)} />
+                <input id="ai-price" className="ai-input" inputMode="decimal" placeholder="₱0" value={showMoney(price)}
+                  onChange={(e) => setPrice(cleanMoney(e.target.value))} />
               </div>
               <div>
                 <label className="ai-label" htmlFor="ai-orig">Original price (optional)</label>
-                <input id="ai-orig" className="ai-input" inputMode="decimal" value={original ? peso(original) : ""}
-                  onChange={(e) => setOriginal(e.target.value)} />
+                <input id="ai-orig" className="ai-input" inputMode="decimal" placeholder="₱0" value={showMoney(original)}
+                  onChange={(e) => setOriginal(cleanMoney(e.target.value))} />
               </div>
               <div>
                 <label className="ai-label" htmlFor="ai-target">Target price</label>
-                <input id="ai-target" className="ai-input" inputMode="decimal" placeholder="e.g. 999" value={target}
-                  onChange={(e) => { setTarget(e.target.value); if (targetError) setTargetError(validateTargetPrice(e.target.value)); }}
+                <input id="ai-target" className="ai-input" inputMode="decimal" placeholder="e.g. ₱999" value={showMoney(target)}
+                  onChange={(e) => { const v = cleanMoney(e.target.value); setTarget(v); if (targetError) setTargetError(validateTargetPrice(v)); }}
                   onBlur={() => setTargetError(validateTargetPrice(target))}
                   aria-invalid={!!targetError} aria-describedby={targetError ? "ai-target-error" : undefined} />
                 {targetError && <p id="ai-target-error" className="ai-error ai-error--field" role="alert">{targetError}</p>}
