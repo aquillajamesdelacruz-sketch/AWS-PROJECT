@@ -502,12 +502,24 @@ html[data-theme="dark"] input::placeholder { color: var(--muted); }
 .wl-x,.db-modal__close,.ai-close { display:grid; place-items:center; padding:0; line-height:1; }
 .wl-x svg,.db-modal__close svg,.ai-close svg { display:block; margin:0; }
 .wl-list th { white-space:nowrap; }
-.wl-editbar { position:sticky; bottom:88px; top:16px; z-index:15; display:flex; align-items:center; flex-wrap:wrap; gap:12px; background:var(--surface); border:1px solid var(--line); border-radius:16px; box-shadow:var(--elevation-card); padding:12px 16px; }
-.wl-editbar p { margin:0 auto 0 0; font-weight:800; color:var(--ink); }
+.wl-editbar { position:static; display:flex; width:fit-content; max-width:100%; align-items:center; flex-wrap:wrap; gap:8px 16px; margin:20px 0 0; padding:0; background:none; border:0; border-radius:0; box-shadow:none; }
+.wl-editbar p { margin:0; font-size:.875rem; font-weight:800; color:var(--ink); }
+.wl-editbar .wl-selection { padding:0 4px; }
+.wl-edit-done { min-height:44px; padding:8px 16px; border:1px solid var(--line); border-radius:var(--radius-control); background:var(--surface); color:var(--ink); font:inherit; font-size:.875rem; font-weight:800; cursor:pointer; }
+.wl-delete-item { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-width:44px; min-height:44px; padding:8px 12px; border:1px solid var(--line); border-radius:var(--radius-control); background:var(--surface); color:var(--danger); font:inherit; font-size:.875rem; font-weight:800; cursor:pointer; }
+.wl-delete-item svg { flex:none; width:20px; height:20px; }
+.wl-delete-item:hover:not(:disabled) { border-color:var(--danger); background:var(--cream); }
+.wl-delete-item:disabled { opacity:.5; cursor:not-allowed; }
+.wl-delete-item:focus-visible,.wl-edit-done:focus-visible { outline:3px solid var(--focus); outline-offset:3px; }
+.wl-card { position:relative; }
+.wl-card.is-selected,.wl-row.is-selected { background:var(--surface); }
+.wl-card__delete { position:absolute; top:12px; right:12px; z-index:1; padding:10px; box-shadow:0 2px 8px rgb(15 23 42 / .12); }
+.wl-delete-symbol { display:grid; place-items:center; width:48px; height:48px; margin-bottom:16px; border-radius:12px; color:var(--danger); background:var(--cream); }
+.wl-delete-names { overflow-wrap:anywhere; font-weight:700; color:var(--ink); }
 .wl-selection input,.cl-picker input { appearance:none; width:24px; height:24px; min-width:24px; min-height:24px; border:2px solid var(--muted); border-radius:8px; background:var(--surface); cursor:pointer; margin:0; }
 .wl-selection input:checked,.cl-picker input:checked { background:#c2410c; border-color:#c2410c; box-shadow:inset 0 0 0 4px var(--surface); }
 .wl-selection input:focus-visible,.cl-picker input:focus-visible { outline:3px solid var(--focus); outline-offset:3px; }
-.wl-card>.wl-selection { position:absolute; top:12px; right:12px; width:44px; min-height:44px; display:grid; place-items:center; background:var(--surface); border-radius:12px; z-index:1; }
+.wl-card>.wl-selection { position:absolute; top:12px; left:12px; right:auto; width:44px; min-height:44px; padding:10px; display:grid; place-items:center; background:var(--surface); border-radius:var(--radius-control); z-index:1; box-shadow:0 2px 8px rgb(15 23 42 / .12); }
 .wl-card>.wl-selection span { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
 .wl-card,.cl-card { transition:border-color 180ms ease,box-shadow 180ms ease; }
 .wl-card.is-selected,.cl-card.is-selected { border-color:#c2410c; box-shadow:0 0 0 3px rgb(194 65 12 / .2); }

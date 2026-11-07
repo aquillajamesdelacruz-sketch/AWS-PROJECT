@@ -66,16 +66,19 @@ function ProgressBar({ item }) {
 }
 
 /* ---------- confirm delete ---------- */
-function ConfirmDelete({ onCancel, onConfirm }) {
+function ConfirmDelete({ items, onCancel, onConfirm }) {
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState("");
   return (
-    <Modal onClose={onCancel} className="wl-modal--sm">
-      <h2>Are you sure you want to delete?</h2>{error && <p role="alert" className="ai-error">{error}</p>}
+    <Modal onClose={busy ? () => {} : onCancel} className="wl-modal--sm" role="alertdialog" labelledBy="delete-product-title">
+      <span className="wl-delete-symbol" aria-hidden="true"><TrashI /></span>
+      <h2 id="delete-product-title">{items.length === 1 ? "Delete this item?" : `Delete ${items.length} items?`}</h2>
+      <p className="wl-delete-names">{items.map(item => item.name).join(", ")}</p>
+      {error && <p role="alert" className="ai-error">{error}</p>}
       <p className="wl-muted">You’ll have to add them again.</p>
       <div className="wl-actions">
-        <button type="button" className="wl-btn wl-btn--ghost" onClick={onCancel}>Cancel</button>
-        <button type="button" className="wl-btn wl-btn--danger" disabled={busy} onClick={async()=>{setBusy(true);setError("");try{await onConfirm();}catch{setError("Could not delete the items. Please try again.");setBusy(false);}}}>{busy?"Deleting...":"Delete"}</button>
+        <button type="button" className="wl-btn wl-btn--ghost" disabled={busy} onClick={onCancel}>Cancel</button>
+        <button type="button" className="wl-btn wl-btn--danger" disabled={busy} onClick={async()=>{setBusy(true);setError("");try{await onConfirm();}catch{setError("Could not delete the items. Please try again.");setBusy(false);}}}><TrashI />{busy?"Deleting...":items.length === 1 ? "Delete item" : "Delete items"}</button>
       </div>
     </Modal>
   );
@@ -232,12 +235,13 @@ export function ProductModal({ item, onClose, onEdit, onDelete, onUpdate, onBoug
 }
 
 /* ---------- views ---------- */
-export function CardView({ items, edit, selected, toggle, open, actionLabel = "View Product" }) {
+export function CardView({ items, edit, selected, toggle, open, onDelete, actionLabel = "View Product" }) {
   return (
     <div className="wl-cards">
       {items.map((it) => (
         <article key={it.id} className={`wl-card${selected.includes(it.id) ? " is-selected" : ""}`}>
           {edit && <label className="wl-selection"><input type="checkbox" checked={selected.includes(it.id)} onChange={() => toggle(it.id)} /><span>Select {it.name}</span></label>}
+          {edit && <button type="button" className="wl-delete-item wl-card__delete" aria-label={`Delete ${it.name}`} title={`Delete ${it.name}`} onClick={() => onDelete(it.id)}><TrashI /></button>}
           <Thumb item={it} className="wl-card__img" />
           <div className="wl-card__body">
             <h3>{it.name.split(",")[0]}</h3>
@@ -258,7 +262,7 @@ export function CardView({ items, edit, selected, toggle, open, actionLabel = "V
   );
 }
 
-function ListView({ items, edit, selected, toggle, open, sort, setSort }) {
+function ListView({ items, edit, selected, toggle, open, onDelete, sort, setSort }) {
   const heading = (key, label) => (
     <th scope="col" aria-sort={sort.key === key ? (sort.dir === 1 ? "ascending" : "descending") : undefined}>
       <button type="button" className="wl-sort" onClick={() => setSort(sort.key === key ? { key, dir: -sort.dir } : { key, dir: 1 })}>{label}<SortI /></button>
@@ -277,7 +281,7 @@ function ListView({ items, edit, selected, toggle, open, sort, setSort }) {
             <td data-label="Product name"><b>{it.name}</b><small>Starting price: {peso2(it.original)}</small></td>
             <td data-label="Current price" className="wl-row__price">{peso2(it.price)}</td>
             <td data-label="Change" className={`wl-row__status${ch < 0 ? " is-down" : ch > 0 ? " is-up" : ""}`}>{ch > 0 ? "+" : ""}{ch}%</td>
-            <td data-label="Action">{edit ? <span>{selected.includes(it.id) ? "Selected" : "Not selected"}</span> : <button type="button" className="wl-btn wl-btn--primary" aria-label={`View ${it.name}`} onClick={() => open(it.id)}>View product</button>}</td>
+            <td data-label="Action">{edit ? <button type="button" className="wl-delete-item" aria-label={`Delete ${it.name}`} onClick={() => onDelete(it.id)}><TrashI /><span>Delete</span></button> : <button type="button" className="wl-btn wl-btn--primary" aria-label={`View ${it.name}`} onClick={() => open(it.id)}>View product</button>}</td>
           </tr>;
         })}</tbody>
       </table>
@@ -321,7 +325,10 @@ export default function Watchlist({ items, collections = [], openId, onOpened, o
 
   const doDelete = async () => {
     await onDelete(confirm);
-    setConfirm(null); setDetailId(null); setSelected([]); setEdit(false);
+    setSelected(ids => ids.filter(id => !confirm.includes(id)));
+    if (confirm.includes(detailId)) setDetailId(null);
+    if (items.every(item => confirm.includes(item.id))) setEdit(false);
+    setConfirm(null);
   };
 
   return (
@@ -350,9 +357,10 @@ export default function Watchlist({ items, collections = [], openId, onOpened, o
 
       {edit && (
         <div className="wl-editbar">
-          <p aria-live="polite">{selected.length} items selected</p><button className="wl-btn" onClick={toggleEdit}>Done</button>
+          <p aria-live="polite">{selected.length === 1 ? "1 item selected" : `${selected.length} items selected`}</p>
           <label className="wl-selection"><input type="checkbox" checked={allSelected} onChange={() => setSelected(allSelected ? [] : shown.map((i) => i.id))} />Select all</label>
-          <button type="button" className="wl-red wl-red--strong" disabled={!selected.length} onClick={() => setConfirm(selected)}><TrashI />Delete items</button>
+          <button type="button" className="wl-delete-item" disabled={!selected.length} onClick={() => setConfirm(selected)}><TrashI />Delete selected</button>
+          <button type="button" className="wl-edit-done" onClick={toggleEdit}>Done</button>
         </div>
       )}
 
@@ -366,9 +374,9 @@ export default function Watchlist({ items, collections = [], openId, onOpened, o
       ) : !shown.length ? (
         <section className="wl-empty wl-empty--sm"><h2>No matches.</h2><p>{searchError || query.trim() ? "Nothing in your watchlist matches your search" : "Nothing in this category yet"}{category !== "All" ? ` in ${category}` : ""}.</p></section>
       ) : view === "card" ? (
-        <CardView items={shown} edit={edit} selected={selected} toggle={toggle} open={setDetailId} />
+        <CardView items={shown} edit={edit} selected={selected} toggle={toggle} open={setDetailId} onDelete={id => setConfirm([id])} />
       ) : (
-        <ListView items={shown} edit={edit} selected={selected} toggle={toggle} open={setDetailId} sort={sort} setSort={setSort} />
+        <ListView items={shown} edit={edit} selected={selected} toggle={toggle} open={setDetailId} onDelete={id => setConfirm([id])} sort={sort} setSort={setSort} />
       )}
 
       {detail && !editing && !confirm && (
@@ -377,7 +385,7 @@ export default function Watchlist({ items, collections = [], openId, onOpened, o
           onEdit={() => setEditingId(detail.id)} onDelete={() => setConfirm([detail.id])} />
       )}
       {editing && <UpdateItem item={editing} collections={collections} onClose={() => setEditingId(null)} onSave={async (u) => { await onUpdate(u); celebrate({ subtle: true }); setEditingId(null); }} />}
-      {confirm && <ConfirmDelete onCancel={() => setConfirm(null)} onConfirm={doDelete} />}
+      {confirm && <ConfirmDelete items={items.filter(item => confirm.includes(item.id))} onCancel={() => setConfirm(null)} onConfirm={doDelete} />}
     </div>
   );
 }

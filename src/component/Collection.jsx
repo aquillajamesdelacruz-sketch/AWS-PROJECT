@@ -170,9 +170,10 @@ export default function Collection({ items, collections, watchlistFull = false, 
 
       {edit && (
         <div className="wl-editbar">
-          <p aria-live="polite">{selected.length} collections selected</p><button type="button" className="wl-btn" onClick={toggleEdit}>Done</button>
+          <p aria-live="polite">{selected.length === 1 ? "1 collection selected" : `${selected.length} collections selected`}</p>
           <button type="button" className="wl-red" aria-pressed={allSelected} onClick={() => setSelected(allSelected ? [] : shown.map((c) => c.id))}><span className={`wl-box${allSelected ? " is-on" : ""}`} />Select All</button>
-          <button type="button" className="wl-red wl-red--strong" disabled={!selected.length} onClick={() => setConfirm(true)}><TrashI />Delete collections</button>
+          <button type="button" className="wl-delete-item" disabled={!selected.length} onClick={() => setConfirm(true)}><TrashI />Delete collections</button>
+          <button type="button" className="wl-edit-done" onClick={toggleEdit}>Done</button>
         </div>
       )}
 

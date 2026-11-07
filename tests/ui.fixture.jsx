@@ -37,7 +37,7 @@ if (scene === 'dashboard') localStorage.setItem('peekyfox-theme',params.get('the
 const fixtureTime = Date.now();
 const initialItems = [{ id:'one', name:'Wireless headphones for everyday listening', price:2400, original:3200, target:2000, store:'Shopee', category:'Electronics', collection:'Next upgrade', alert:true, createdAt:fixtureTime, history:[{ price:3200, at:fixtureTime-86400000 },{ price:2400, at:fixtureTime }] }];
 export function Fixture() {
-  const [items, setItems] = useState(initialItems);
+  const [items, setItems] = useState(params.has('multiple') ? [...initialItems, {...initialItems[0], id:'two', name:'Travel keyboard'}] : initialItems);
   const [open, setOpen] = useState(false);
   const [focused,setFocused]=useState(null);
   const [settings, setSettings] = useState({ email:'test@example.com', inApp:true, emailAlerts:false, frequency:'instant', theme:params.get('theme') || 'light', stockThreshold:5 });
@@ -50,7 +50,7 @@ export function Fixture() {
   if (scene === 'register') return <Register />;
   if (scene === 'dashboard') return <Dashboard userName="Alex" previewOnboarding />;
   return <main className="db-main" style={{ minHeight:'100dvh' }}>
-    {scene === 'watchlist' && <Watchlist items={items} collections={['Next upgrade']} onAdd={() => setOpen(true)} onUpdate={async (item) => setItems([item])} onDelete={async () => setItems([])} onBought={async () => setItems([])} />}
+    {scene === 'watchlist' && <Watchlist items={items} collections={['Next upgrade']} onAdd={() => setOpen(true)} onUpdate={async (item) => setItems(xs=>xs.map(x=>x.id===item.id?item:x))} onDelete={async ids => {if(params.has('deleteError')) throw new Error('Delete failed');setItems(xs=>xs.filter(x=>!ids.includes(x.id)));}} onBought={async () => setItems([])} />}
     {scene === 'collection' && <Collection items={items} collections={collections} onCreate={async (item) => setCollections([...collections,{...item,id:'new'}])} onRename={async (collection,name)=>{setCollections(cs=>cs.map(c=>c.id===collection.id?{...c,name}:c));setItems(xs=>xs.map(i=>({...i,collection:i.collection===collection.name?name:i.collection,collections:memberships(i).map(n=>n===collection.name?name:n)})));}} onAddMembers={async (name,selected)=>setItems(xs=>xs.map(i=>selected.some(s=>s.id===i.id)?{...i,collections:[...memberships(i),name]}:i))} onDelete={async ids => setCollections(cs=>cs.filter(c=>!ids.includes(c.id)))} onAddItem={() => setOpen(true)} onViewItem={() => {}} />}
     {scene === 'savings' && <BoughtSavings purchases={purchases} onUndo={async p=>setPurchases(ps=>ps.filter(x=>x.id!==p.id))} />}
     {scene === 'home' && <><h1>Dashboard</h1><DashboardHome items={items} purchases={[]} collections={[]} onQuickAdd={() => setOpen(true)} onViewItem={() => {}} onViewAll={() => {}} /></>}
