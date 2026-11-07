@@ -71,7 +71,6 @@ function ConfirmDelete({ items, onCancel, onConfirm }) {
   const [error,setError]=useState("");
   return (
     <Modal onClose={busy ? () => {} : onCancel} className="wl-modal--sm" role="alertdialog" labelledBy="delete-product-title">
-      <span className="wl-delete-symbol" aria-hidden="true"><TrashI /></span>
       <h2 id="delete-product-title">{items.length === 1 ? "Delete this item?" : `Delete ${items.length} items?`}</h2>
       <p className="wl-delete-names">{items.map(item => item.name).join(", ")}</p>
       {error && <p role="alert" className="ai-error">{error}</p>}
