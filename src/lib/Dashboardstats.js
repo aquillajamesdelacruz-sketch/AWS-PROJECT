@@ -134,7 +134,7 @@ export function timeAgo(ms, now = Date.now()) {
 // Notifications are built from the real price history of the user's items (no stored copy).
 // Returns newest first: [{ id, text, at, color }]
 //  - green: the price dropped      - red: the price went up      - navy: the target price was reached
-export function buildNotifications(items, limit = 8) {
+export function buildNotifications(items, limit = Infinity) {
   const peso = (n) => "₱" + Math.round(num(n)).toLocaleString("en-PH");
   const list = [];
 

@@ -122,6 +122,14 @@
   padding: 0 0 16px; border-bottom: 1px solid #e5e7eb;
 }
 .dh-notif__head h2 { margin: 0; font-size: 20px; font-weight: 800; }
+.dh-notif__head h1 { margin: 0; font-size: 28px; font-weight: 800; }
+.dh-notif__more { display: block; padding: 16px 8px; text-align: center; color: var(--ink); font-weight: 800; text-underline-offset: 4px; border-top: 1px solid #e5e7eb; }
+.dh-notif__more:hover { color: var(--orange); }
+.dh-notif.dh-notif--page { position: static; width: 100%; max-height: none; overflow: visible; box-sizing: border-box; box-shadow: none; background: var(--surface, #fff); border-radius: 16px; padding: 24px; }
+.dh-notif--page .dh-notif__item { cursor: pointer; overflow-wrap: anywhere; }
+@media (max-width: 520px) {
+  .dh-notif--page .dh-notif__head { align-items: flex-start; flex-direction: column; }
+}
 .dh-notif__head button {
   height: 48px; padding: 0 24px; border: 1px solid #e5e7eb; border-radius: 12px;
   background: #fff; color: var(--ink); cursor: pointer; white-space: nowrap;

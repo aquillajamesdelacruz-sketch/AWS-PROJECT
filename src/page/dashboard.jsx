@@ -73,6 +73,7 @@ const DASHBOARD_ROUTES = {
   Collection: "/dashboard/collections",
   "Bought and Savings": "/dashboard/savings",
   Settings: "/dashboard/settings",
+  Notifications: "/dashboard/notifications",
 };
 const routeToView = (pathname) => {
   const path = pathname.replace(/\/+$/, "") || "/dashboard";
@@ -443,7 +444,16 @@ export default function Dashboard({ userName: initialName = "Bea Shainne", onDel
       <main className={`db-main${["Watchlist", "Collection", "Bought and Savings", "Settings"].includes(active) ? " db-main--aligned-title" : ""}${active === "Watchlist" ? " db-main--watchlist" : ""}`} id="main-content" tabIndex={-1}>
         <div className="db-route" key={active}>
         {active !== "Dashboard" && <div className="db-utility-header">{tools}</div>}
-        {active === "Watchlist" ? (
+        {active === "Notifications" ? (
+          <Notifications
+            fullPage
+            notifications={notifications}
+            readAt={settings.notifReadAt || 0}
+            enabled={settings.inApp}
+            onMarkRead={() => handleSettings({ notifReadAt: Date.now() })}
+            onViewItem={id => { setFocusId(id); setActive("Watchlist"); }}
+          />
+        ) : active === "Watchlist" ? (
 
           // firebase added
           <Watchlist

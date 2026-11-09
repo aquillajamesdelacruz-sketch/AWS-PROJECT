@@ -1,6 +1,7 @@
 import { productImage } from "../lib/media.js";
 import Popover from "./Popover.jsx";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { storeBreakdown, biggestDrop, topWatched, dropPercent, totalSaved, savedPercent, savingsTrend, trendPath, timeAgo } from "../lib/Dashboardstats.js";
 
 const peso = (n) => "₱" + Number(n).toLocaleString("en-PH", { minimumFractionDigits: 0 });
@@ -24,11 +25,13 @@ function CollectionIcon({ type }) {
 
 // panel now shows real notifications.
 // saved in Firebase so it survives a refresh.
-export function Notifications({ notifications = [], readAt = 0, enabled = true, onMarkRead, onClose, onViewItem }) {
+export function Notifications({ notifications = [], readAt = 0, enabled = true, onMarkRead, onClose, onViewItem, fullPage = false }) {
+  const Container = fullPage ? "section" : Popover;
+  const visibleNotifications = fullPage ? notifications : notifications.slice(0, 3);
   return (
-    <Popover className="dh-notif" onClose={onClose} label="Notifications">
+    <Container className={`dh-notif${fullPage ? " dh-notif--page" : ""}`} {...(fullPage ? { "aria-labelledby": "all-notifications-title" } : { onClose, label: "Notifications" })}>
       <div className="dh-notif__head">
-        <h2 id="notifications-title">Notifications</h2>
+        {fullPage ? <h1 id="all-notifications-title">Notifications</h1> : <h2 id="notifications-title">Notifications</h2>}
         <button type="button" onClick={onMarkRead} disabled={!notifications.length}>Mark all as read</button>
       </div>
       {!enabled ? (
@@ -37,15 +40,16 @@ export function Notifications({ notifications = [], readAt = 0, enabled = true, 
         <p className="dh-none dh-notif__empty">Nothing new yet. Pixie will tell you when a price changes.</p>
       ) : (
         <ul>
-          {notifications.map((n) => (
+          {visibleNotifications.map((n) => (
             <li key={n.id}>
               <span className="dh-notif__dot" style={{ background: n.at > readAt ? n.color : "#cbd5e1" }} />
-              <button type="button" className="dh-notif__item" onClick={() => { if(n.itemId) onViewItem?.(n.itemId); onClose(); }}><span>{n.text}</span><small>{timeAgo(n.at)}</small></button>
+              <button type="button" className="dh-notif__item" onClick={() => { if(n.itemId) onViewItem?.(n.itemId); onClose?.(); }}><span>{n.text}</span><small>{timeAgo(n.at)}</small></button>
             </li>
           ))}
         </ul>
       )}
-    </Popover>
+      {!fullPage && <Link className="dh-notif__more" to="/dashboard/notifications" onClick={onClose}>View more</Link>}
+    </Container>
   );
 }
 
